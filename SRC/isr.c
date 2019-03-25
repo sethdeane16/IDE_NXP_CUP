@@ -2,10 +2,10 @@
  * isr.c
  */
 
-#include "isr.h"
-#include "MK64F12.h"
 #include <stdio.h>
-#include "uart.h"
+#include "../INCLUDE/MK64F12.h"
+#include "../INCLUDE/uart.h"
+#include "../INCLUDE/isr.h"
 
 //variables global to the IRQ handlers which dictates if timer is enabled &  timer counter
 int sw2Pressed = 0; // 1 for pressed

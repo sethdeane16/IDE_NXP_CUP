@@ -7,9 +7,10 @@
  * Modified:
  */
 
-#include "MK64F12.h"
-#include "uart.h"
-#include "pwm.h"
+#include "../INCLUDE/MK64F12.h"
+#include "../INCLUDE/camera.h"
+#include "../INCLUDE/uart.h"
+#include "../INCLUDE/pwm.h"
 
 void initialize();
 void en_interrupts();

@@ -22,9 +22,10 @@
  * Modified:  11/23/15
  */
 
-#include "MK64F12.h"
-#include "uart.h"
-#include "stdio.h"
+#include "../INCLUDE/MK64F12.h"
+#include "../INCLUDE/camera.h"
+#include "../INCLUDE/stdio.h"
+#include "../INCLUDE/uart.h"
 
 // Default System clock value
 // period = 1/20485760  = 4.8814395e-8
@@ -35,14 +36,6 @@
 // Must be above 1.25 ms based on camera clk
 //  (camera clk is the mod value set in FTM2)
 #define INTEGRATION_TIME .0075f
-
-void init_FTM2(void);
-void init_GPIO(void);
-void init_PIT(void);
-void init_ADC0(void);
-void FTM2_IRQHandler(void);
-void PIT1_IRQHandler(void);
-void ADC0_IRQHandler(void);
 
 // Pixel counter for camera logic
 // Starts at -2 so that the SI pulse occurs
