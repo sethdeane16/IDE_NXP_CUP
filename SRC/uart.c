@@ -2,7 +2,7 @@
  * File:        Lab4_uart.c
  * Purpose:     Provide UART3 for Bluetooth
  *
- * Notes:		
+ * Notes:       
  *
  */
 
@@ -136,7 +136,7 @@ void put(char *ptr_str)
 void putnumU(int i)
 {
     char num[10];
-	sprintf( num, "%d", i );
-	put( num );
+    sprintf( num, "%d", i );
+    put( num );
 }
 
