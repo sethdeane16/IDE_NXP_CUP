@@ -20,15 +20,32 @@ int main(void)
 	// Initialize UART and PWM
 	initialize();
 
+    int cam_vals[128];
 
-	//Generate 20% duty cycle at 10kHz
-	SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-    SetServoDutyCycle(8);
     while(1){
-        for(int i=0; i<3; i++){
-            SetServoDutyCycle(i+6);
-            delay(10);
-        }
+        // Read Trace Camera
+        cam_vals = camera_main();
+        //print to verify?
+
+        // Normalize Trace
+        // Median
+
+        // Weighted averaging
+
+        // Find Left and Right edge
+        // (Assuming left to right read)
+        // Left is max of derivative Right is min
+
+        // Distance from left and right to middle
+        // Figure out margin and if we need to turn
+        SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        SetServoDutyCycle(8);
+        // Else go straight
+        SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        SetServoDutyCycle(8);
+
+        // EXTRA: Make more gradual turn by using floats
+
     }
 
 	return 0;
