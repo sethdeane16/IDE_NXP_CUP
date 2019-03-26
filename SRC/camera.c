@@ -60,7 +60,7 @@ Parameters -
 
 Returns - a 128 int array of camera values
 */
-int camera_main(void)
+int* Camera_Main(void)
 {
     int i;
 
@@ -80,17 +80,19 @@ int camera_main(void)
             sprintf(str,"%i\n\r",-1); // start value
             put(str);
             for (i = 0; i < 127; i++) {
-                sprintf(str,"%i\n", line[i]);
+                sprintf(str,"%i ", line[i]);
                 put(str);
             }
-            sprintf(str,"%i\n\r",-2); // end value
+            sprintf(str,"\n%i\n\r",-2); // end value
             put(str);
             capcnt = 0;
             GPIOB_PSOR |= (1 << 22);
         }
     }
 
-} //main
+    return *line;
+
+} //Camera_Main
 
 
 /* ADC0 Conversion Complete ISR  */

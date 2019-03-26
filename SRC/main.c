@@ -21,11 +21,14 @@ int main(void)
 	// Initialize UART and PWM
 	initialize();
 
-    int cam_vals[128];
+    int CAM_VALS = 128;
+    int* ptr;
+
+
 
     while(1){
         // Read Trace Camera
-        cam_vals = camera_main();
+        ptr = camera_main();
         //print to verify?
 
         // Normalize Trace
@@ -38,12 +41,12 @@ int main(void)
         // Left is max of derivative Right is min
 
         // Distance from left and right to middle
-        // Figure out margin and if we need to turn
-        SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        SetServoDutyCycle(8);
+        // Figure out margin use margin to determine how much to turn
+        //SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        //SetServoDutyCycle(8);
         // Else go straight
-        SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        SetServoDutyCycle(8);
+        //SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        //SetServoDutyCycle(8);
 
         // EXTRA: Make more gradual turn by using floats
 

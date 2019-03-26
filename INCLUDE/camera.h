@@ -1,6 +1,7 @@
 #ifndef CAMERA_H_
 #define CAMERA_H_
 
+int* Camera_Main(void)
 void init_FTM2(void);
 void init_GPIO(void);
 void init_PIT(void);
