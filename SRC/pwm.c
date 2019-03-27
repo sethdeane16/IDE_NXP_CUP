@@ -168,14 +168,14 @@ void InitPWM()
 }
 
 /*OK to remove this ISR?*/
-void FTM0_IRQHandler(void){ //For FTM0 timer
-
-  FTM0_SC &= ~FTM_SC_TOF_MASK;
-
-    //if motor tick less than 255 count up...
-    if (PWM0Tick < 0xff)
-        PWM0Tick++;
-}
+//void FTM0_IRQHandler(void){ //For FTM0 timer
+//
+//  FTM0_SC &= ~FTM_SC_TOF_MASK;
+//
+//    //if motor tick less than 255 count up...
+//    if (PWM0Tick < 0xff)
+//        PWM0Tick++;
+//}
 
 /*OK to remove this ISR?*/
 void FTM3_IRQHandler(void){ //For FTM3 timer

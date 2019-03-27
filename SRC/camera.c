@@ -60,16 +60,9 @@ Parameters -
 
 Returns - a 128 int array of camera values
 */
-int* Camera_Main(void)
+uint16_t* Camera_Main(void)
 {
     int i;
-
-    uart0_init();
-    uart3_init();
-    init_GPIO(); // For CLK and SI output on GPIO
-    init_FTM2(); // To generate CLK, SI, and trigger ADC
-    init_ADC0();
-    init_PIT(); // To trigger camera read based on integration time
 
     if (debugcamdata) {
         // Every 2 seconds
@@ -90,7 +83,7 @@ int* Camera_Main(void)
         }
     }
 
-    return *line;
+    return line;
 
 } //Camera_Main
 
@@ -314,7 +307,7 @@ void init_ADC0(void) {
   ADC0_SC1A = 0;
   ADC0_SC1A |= ADC_SC1_AIEN_MASK;
     ADC0_SC1A &= ~ADC_SC1_DIFF_MASK;
-  ADC0_SC1A |= ADC_SC1_ADCH(0x01);
+  ADC0_SC1A &= ~ADC_SC1_ADCH(0x1F);
 
     // Set up FTM2 trigger on ADC0
     SIM_SOPT7 &= ~(0xF << SIM_SOPT7_ADC0TRGSEL_SHIFT);

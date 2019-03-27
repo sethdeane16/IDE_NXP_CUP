@@ -24,13 +24,13 @@ int main(void)
     int CAM_VALS = 128;
     int HALF = 64;
     int MARGIN;
-    int* ptr;
+    uint16_t* ptr;
 
 
 
     while(1){
         // Read Trace Camera
-        ptr = camera_main();
+        ptr = Camera_Main();
         //print to verify?
         // ptr_size = sizeof(ptr)/sizeof(ptr[0]);
 
@@ -93,36 +93,36 @@ int main(void)
 
 
 // convolve
-convolve(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
-{
-    // size of y (output vector) needs to be the same size as f (input vector)
-    // start hSizein so we don’t index less than 0  (boundary condition)
-    for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
-    {
-        double sum = 0.0;
-        for (int j=hSize; j >=0; j--)
-        {
-            sum += h[j] * x[i-j];   //inner dot product
-        }
-        y[i] = sum;
-    }
-}
+// convolve(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
+// {
+    // // size of y (output vector) needs to be the same size as f (input vector)
+    // // start hSizein so we don’t index less than 0  (boundary condition)
+    // for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
+    // {
+        // double sum = 0.0;
+        // for (int j=hSize; j >=0; j--)
+        // {
+            // sum += h[j] * x[i-j];   //inner dot product
+        // }
+        // y[i] = sum;
+    // }
+// }
 
-// convolve_avg
-convolve_avg(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
-{
-    // size of y (output vector) needs to be the same size as f (input vector)
-    // start hSizein so we don’t index less than 0  (boundary condition)
-    for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
-    {
-        double sum = 0.0;
-        for (int j=hSize; j >=0; j--)
-        {
-            sum += h[j] * x[i-j];   //inner dot product
-        }
-        y[i] = sum * (1/10);
-    }
-}
+// // convolve_avg
+// convolve_avg(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
+// {
+    // // size of y (output vector) needs to be the same size as f (input vector)
+    // // start hSizein so we don’t index less than 0  (boundary condition)
+    // for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
+    // {
+        // double sum = 0.0;
+        // for (int j=hSize; j >=0; j--)
+        // {
+            // sum += h[j] * x[i-j];   //inner dot product
+        // }
+        // y[i] = sum * (1/10);
+    // }
+// }
 
 /**
  * Waits for a delay (in milliseconds)
@@ -141,6 +141,12 @@ void initialize()
 	// Initialize UART
 	uart0_init();
 	uart3_init();
+    
+    // Initialize Camera
+    init_GPIO(); // For CLK and SI output on GPIO
+    init_FTM2(); // To generate CLK, SI, and trigger ADC
+    init_ADC0();
+    init_PIT(); // To trigger camera read based on integration time
 
 	// Initialize the FlexTimer
 	InitPWM();
