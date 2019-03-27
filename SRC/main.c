@@ -22,6 +22,8 @@ int main(void)
 	initialize();
 
     int CAM_VALS = 128;
+    int HALF = 64;
+    int MARGIN;
     int* ptr;
 
 
@@ -30,23 +32,52 @@ int main(void)
         // Read Trace Camera
         ptr = camera_main();
         //print to verify?
+        // ptr_size = sizeof(ptr)/sizeof(ptr[0]);
+
+        // Make double
 
         // Normalize Trace
         // Median
+        // double no_peaks[128];
+        // median_filter(ptr, );
 
         // Weighted averaging
+        // weight_kern = [1 2 4 2 1];
+        // double clean_sig[128];
+        // convolve_avg(no_peaks, weight_kern, clean_sig, ptr_size, sizeof(weight_kern)/sizeof(weight_kern[0])););
 
         // Find Left and Right edge
         // (Assuming left to right read)
         // Left is max of derivative Right is min
+        // deriv_kern = [-1 0 1];
+        // double deriv[128];
+        // convolve(clean_sig, deriv_kern, deriv, ptr_size, sizeof(deriv_kern)/sizeof(deriv_kern[0]));
+        // left_idx = max(deriv);
+        // right_idx = min(deriv);
 
+        // FOR LATER: Base off previous state? And use difference to determine how hard to turn
+        // Could be function
         // Distance from left and right to middle
         // Figure out margin use margin to determine how much to turn
-        //SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        //SetServoDutyCycle(8);
-        // Else go straight
-        //SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        //SetServoDutyCycle(8);
+        // delta_r = right_idx - HALF;
+        // delta_l = HALF - left_idx;
+        // if (delta_r > delta_l + MARGIN)
+        // {
+        //     //steer right based off servo
+        //     SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        //     SetServoDutyCycle(8);
+        // }
+        // else if(delta_l > delta_r + MARGIN)
+        // {
+        //     //steer left based off servo
+        //     SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        //     SetServoDutyCycle(8);
+        // }
+        // else
+        // {
+        //     SetMotorDutyCycle(40, 10000, 1);		// C4 Active
+        //     SetServoDutyCycle(8);
+        // }
 
         // EXTRA: Make more gradual turn by using floats
 
@@ -55,6 +86,43 @@ int main(void)
 	return 0;
 }
 
+
+// median_filter
+// median_filter()
+// A three point median filter
+
+
+// convolve
+convolve(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
+{
+    // size of y (output vector) needs to be the same size as f (input vector)
+    // start hSizein so we don’t index less than 0  (boundary condition)
+    for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
+    {
+        double sum = 0.0;
+        for (int j=hSize; j >=0; j--)
+        {
+            sum += h[j] * x[i-j];   //inner dot product
+        }
+        y[i] = sum;
+    }
+}
+
+// convolve_avg
+convolve_avg(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
+{
+    // size of y (output vector) needs to be the same size as f (input vector)
+    // start hSizein so we don’t index less than 0  (boundary condition)
+    for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
+    {
+        double sum = 0.0;
+        for (int j=hSize; j >=0; j--)
+        {
+            sum += h[j] * x[i-j];   //inner dot product
+        }
+        y[i] = sum * (1/10);
+    }
+}
 
 /**
  * Waits for a delay (in milliseconds)
