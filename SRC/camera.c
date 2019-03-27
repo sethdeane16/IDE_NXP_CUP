@@ -22,10 +22,10 @@
  * Modified:  11/23/15
  */
 
-#include "../INCLUDE/MK64F12.h"
-#include "../INCLUDE/camera.h"
-#include "../INCLUDE/stdio.h"
-#include "../INCLUDE/uart.h"
+#include "MK64F12.h"
+#include "camera.h"
+#include "uart.h"
+#include <stdio.h>
 
 // Default System clock value
 // period = 1/20485760  = 4.8814395e-8
