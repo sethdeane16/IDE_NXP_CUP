@@ -11,6 +11,16 @@
 int sw2Pressed = 0; // 1 for pressed
 int ftmCounter = 0; // ftm counter
 
+/* PDB0_IRQHandler
+* Description:
+* 	TODO
+* 
+* Parameters:
+* 	void
+*
+* Returns:
+*	void
+*/
 void PDB0_IRQHandler(void)
 {
     // clear the interrupt in register PDB0_SC
@@ -22,6 +32,16 @@ void PDB0_IRQHandler(void)
     return;
 }
 
+/* FTM0_IRQHandler
+* Description:
+* 	TODO
+* 
+* Parameters:
+* 	void
+*
+* Returns:
+*	void
+*/
 void FTM0_IRQHandler(void)
 {
     // clear the interrupt in register FTM0_SC
@@ -37,7 +57,16 @@ void FTM0_IRQHandler(void)
 	return;
 }
 
-//For switch 3
+/* PORTA_IRQHandler
+* Description:
+* 	For switch 3
+* 
+* Parameters:
+* 	void
+*
+* Returns:
+*	void
+*/
 void PORTA_IRQHandler(void)
 {
     // clear the interrupt
@@ -63,6 +92,16 @@ void PORTA_IRQHandler(void)
 	return;
 }
 
+/* PORTC_IRQHandler
+* Description:
+* 	TODO
+*
+* Parameters:
+* 	void
+*
+* Returns:
+*	void
+*/
 void PORTC_IRQHandler(void){ //For switch 2
 
     // clear the interrupt

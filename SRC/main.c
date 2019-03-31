@@ -2,7 +2,7 @@
  * Main Method for testing the PWM Code for the K64F
  * PWM signal can be connected to output pins are PC3 and PC4
  *
- * Author:
+ * Author: Seth Deane & Brian Powers
  * Created:
  * Modified:
  */
@@ -11,10 +11,14 @@
 #include "uart.h"
 #include "camera.h"
 #include "pwm.h"
+#include "common.h"
 
 void initialize();
 void en_interrupts();
 void delay();
+void weighted_filter(uint16_t *x,uint16_t *h, uint16_t *y, int xSize,  int hSize);
+void deriva_filter(uint16_t *x,int *h, int16_t *y, int xSize,  int hSize);
+void turnServo(double angle);
 
 int main(void)
 {
@@ -24,36 +28,60 @@ int main(void)
     int CAM_VALS = 128;
     int HALF = 64;
     int MARGIN;
-    uint16_t* ptr;
+    uint16_t* camera_sig;   // previously ptr
 
+    while(1) {
 
+        turnServo(0);
+        delay(200);
+        
+        turnServo(50);
+        delay(200);
+        
+        turnServo(100);
+        delay(200);
 
+    }
+    
     while(1){
         // Read Trace Camera
-        ptr = Camera_Main();
-        //print to verify?
-        // ptr_size = sizeof(ptr)/sizeof(ptr[0]);
+        camera_sig = Camera_Main();
 
-        // Make double
+        // print camera signal
+        put("camera_sig");
+        print_array(camera_sig, 20, 128);
+        
+        /* Normalize Trace */
+        // step 1) Median filter
+//        uint16_t median_sig[128];
+//        median_filter(ptr, );
 
-        // Normalize Trace
-        // Median
-        // double no_peaks[128];
-        // median_filter(ptr, );
+        // step 2) Weighted average filter
+        uint16_t weight_filter[5] = {1,2,4,2,1};
+        uint16_t clean_sig[128];
+        weighted_filter(camera_sig, weight_filter, clean_sig, 128, sizeof(weight_filter)/sizeof(weight_filter[0]));
+        
 
-        // Weighted averaging
-        // weight_kern = [1 2 4 2 1];
-        // double clean_sig[128];
-        // convolve_avg(no_peaks, weight_kern, clean_sig, ptr_size, sizeof(weight_kern)/sizeof(weight_kern[0])););
+        // print clean signal
+        put("clean_sig");
+        print_array(clean_sig, 20, 128);
 
-        // Find Left and Right edge
+        // step 3) Derivative filter
+        int derivative_filter[2] = {-1,1};
+        int16_t deriv_sig[128];
+        deriva_filter(clean_sig, derivative_filter, deriv_sig, 128, sizeof(derivative_filter)/sizeof(derivative_filter[0]));
+
+        // print clean signal
+        put("derivative_sig");
+        print_array(deriv_sig, 20, 128);
+        
+        delay(2000000000);
+        
+        /* Find Left and Right edge */
         // (Assuming left to right read)
         // Left is max of derivative Right is min
-        // deriv_kern = [-1 0 1];
-        // double deriv[128];
-        // convolve(clean_sig, deriv_kern, deriv, ptr_size, sizeof(deriv_kern)/sizeof(deriv_kern[0]));
-        // left_idx = max(deriv);
-        // right_idx = min(deriv);
+//        int left_index = max(deriv_sig);
+//        int right_index = min(deriv_sig);
 
         // FOR LATER: Base off previous state? And use difference to determine how hard to turn
         // Could be function
@@ -86,56 +114,90 @@ int main(void)
 	return 0;
 }
 
+/* median_filter
+* Description:
+*   Apply a median filter to get rid of any peaks in the signal
+* 
+* Parameters:
+*   double &x - TODO
+*   double &y - TODO
+*   int n - TODO
+*
+* Returns:
+*   void
+*/
+//void median_filter(double &x, double &y, int n)
+//{
+//}
 
-// median_filter
-// median_filter()
-// A three point median filter
-
-
-// convolve
-// convolve(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
-// {
-    // // size of y (output vector) needs to be the same size as f (input vector)
-    // // start hSizein so we don’t index less than 0  (boundary condition)
-    // for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
-    // {
-        // double sum = 0.0;
-        // for (int j=hSize; j >=0; j--)
-        // {
-            // sum += h[j] * x[i-j];   //inner dot product
-        // }
-        // y[i] = sum;
-    // }
-// }
-
-// // convolve_avg
-// convolve_avg(constdouble &x,constdouble &h, double &y, constint xSize,  constint hSize)
-// {
-    // // size of y (output vector) needs to be the same size as f (input vector)
-    // // start hSizein so we don’t index less than 0  (boundary condition)
-    // for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
-    // {
-        // double sum = 0.0;
-        // for (int j=hSize; j >=0; j--)
-        // {
-            // sum += h[j] * x[i-j];   //inner dot product
-        // }
-        // y[i] = sum * (1/10);
-    // }
-// }
-
-/**
- * Waits for a delay (in milliseconds)
- *
- * del - The delay in milliseconds
- */
-void delay(int del){
-	int i;
-	for (i=0; i<del*50000; i++){
-		// Do nothing
-	}
+/* convolve
+* Description:
+*   TODO
+* 
+* Parameters:
+*   double x - input array
+*   double h - filter array
+*   double y - output array
+*   int xSize - length of x array
+*   int hSize - length of h array
+*
+* Returns:
+*   void
+*/
+void weighted_filter(uint16_t *x,uint16_t *h, uint16_t *y, int xSize, int hSize)
+{
+    // size of y (output vector) needs to be the same size as f (input vector)
+    // start hSizein so we don’t index less than 0  (boundary condition)
+    for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
+    {
+        double sum = 0.0;
+        for (int j=hSize; j >=0; j--)
+        {
+            sum += h[j] * x[i-j];   //inner dot product
+        }
+        y[i] = sum / 10;
+    }
 }
 
+/* convolve
+* Description:
+*   TODO
+* 
+* Parameters:
+*   double x - input array
+*   double h - filter array
+*   double y - output array
+*   int xSize - length of x array
+*   int hSize - length of h array
+*
+* Returns:
+*   void
+*/
+void deriva_filter(uint16_t *x,int *h, int16_t *y, int xSize, int hSize)
+{
+    // size of y (output vector) needs to be the same size as f (input vector)
+    // start hSizein so we don’t index less than 0  (boundary condition)
+    for (int i=(hSize-1);i <  xSize; i++)  //need to add end boundary condition
+    {
+        double sum = 0.0;
+        for (int j=hSize; j >=0; j--)
+        {
+            sum += h[j] * x[i-j];   //inner dot product
+        }
+        y[i] = sum;
+    }
+}
+
+/* initialize
+* Description:
+*   Function that contains all the initialization data
+* 
+* Parameters:
+*   None
+* 
+* Returns:
+*   void
+*/
 void initialize()
 {
 	// Initialize UART
@@ -150,4 +212,12 @@ void initialize()
 
 	// Initialize the FlexTimer
 	InitPWM();
+}
+
+
+
+
+void turnServo(double angle){
+    double dutycycle = 4.6 + (angle / (double) 22);
+    SetServoDutyCycle(dutycycle);
 }

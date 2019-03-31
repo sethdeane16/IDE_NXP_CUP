@@ -13,13 +13,12 @@
  *  generate the camera signals and read the camera
  *  output.
  *
- *  PTB9            - camera CLK
- *  PTB23       - camera SI
- *  ADC0_DP1    - camera AOut
+ *  PTB9      - camera CLK
+ *  PTB23     - camera SI
+ *  ADC0_DP0  - camera AOut
  *
- * Author:  Alex Avery
- * Created:  11/20/15
- * Modified:  11/23/15
+ * Author:  Seth Deane & Brian Powers
+ * Date Began: 3/21/2019
  */
 
 #include "MK64F12.h"
@@ -38,8 +37,7 @@
 #define INTEGRATION_TIME .0075f
 
 // Pixel counter for camera logic
-// Starts at -2 so that the SI pulse occurs
-//      ADC reads start
+// Starts at -2 so that the SI pulse occurs ADC reads start
 int pixcnt = -2;
 // clkval toggles with each FTM interrupt
 int clkval = 0;
@@ -48,17 +46,22 @@ uint16_t line[128];
 
 // These variables are for streaming the camera
 //   data over UART
-int debugcamdata = 1;
+int debugcamdata = 0;
 int capcnt = 0;
 char str[100];
 
 // ADC0VAL holds the current ADC value
 uint16_t ADC0VAL;
 
-/* camera_main
-Parameters -
-
-Returns - a 128 int array of camera values
+/* Camera_Main
+* Description:
+* 	Retrives a scan from the camera
+* 
+* Parameters:
+*   void
+* 
+* Returns:
+*   uint16_t* - 128 int array of camera values
 */
 uint16_t* Camera_Main(void)
 {
@@ -87,23 +90,39 @@ uint16_t* Camera_Main(void)
 
 } //Camera_Main
 
-
-/* ADC0 Conversion Complete ISR  */
-void ADC0_IRQHandler(void) {
-    // Reading ADC0_RA clears the conversion complete flag
-  ADC0VAL = ADC0_RA;
+/* ADC0_IRQHandler
+* Description:
+* 	ADC0 Conversion Complete ISR
+*
+* Parameters:
+* 	void
+*
+* Returns:
+*	void
+*/
+void ADC0_IRQHandler(void)
+{
+	// Reading ADC0_RA clears the conversion complete flag
+	ADC0VAL = ADC0_RA;
 }
 
-/*
-* FTM2 handles the camera driving logic
+/* FTM2_IRQHandler
+* Description:
+* 	FTM2 handles the camera driving logic
 *   This ISR gets called once every integration period
-*       by the periodic interrupt timer 0 (PIT0)
+*   by the periodic interrupt timer 0 (PIT0)
 *   When it is triggered it gives the SI pulse,
-*       toggles clk for 128 cycles, and stores the line
-*       data from the ADC into the line variable
+*   toggles clk for 128 cycles, and stores the line
+*   data from the ADC into the line variable
+*
+* Parameters:
+* 	void
+*
+* Returns:
+*	void
 */
-void FTM2_IRQHandler(void){ //For FTM timer
-
+void FTM2_IRQHandler(void)
+{
     // Clear interrupt
     FTM2_SC &= ~FTM_SC_TOF_MASK;
 
@@ -140,15 +159,25 @@ void FTM2_IRQHandler(void){ //For FTM timer
     return;
 }
 
-/* PIT0 determines the integration period
-*       When it overflows, it triggers the clock logic from
-*       FTM2. Note the requirement to set the MOD register
+/* PIT0_IRQHandler
+* Description:
+* 	PIT0 determines the integration period
+*   When it overflows, it triggers the clock logic from
+*   FTM2. Note the requirement to set the MOD register
 *   to reset the FTM counter because the FTM counter is
-*       always counting, I am just enabling/disabling FTM2
-*       interrupts to control when the line capture occurs
+*   always counting, I am just enabling/disabling FTM2
+*   interrupts to control when the line capture occurs
+*
+* Parameters:
+*	void
+*
+* Returns:
+*	void
 */
-void PIT0_IRQHandler(void){
-    if (debugcamdata) {
+void PIT0_IRQHandler(void)
+{
+    if (debugcamdata)
+	{
         // Increment capture counter so that we can only
         //  send line data once every ~2 seconds
         capcnt += 1;
@@ -165,9 +194,18 @@ void PIT0_IRQHandler(void){
     return;
 }
 
-
-/* Initialization of FTM2 for camera */
-void init_FTM2(){
+/* init_FTM2
+* Description:
+* 	Initialization of FTM2 for camera
+*
+* Parameters:
+* 	void
+*
+* Returns:
+* 	void
+*/
+void init_FTM2(void)
+{
     // Enable clock
     SIM_SCGC6 |= SIM_SCGC6_FTM2_MASK;
 
@@ -184,12 +222,12 @@ void init_FTM2(){
     FTM2_CNTIN = 0;
 
     // Set the period (~10us)
-  int period = DEFAULT_SYSTEM_CLOCK/100000;
-  FTM2->MOD = period;   // about 200
+	int period = DEFAULT_SYSTEM_CLOCK/100000;
+	FTM2->MOD = period;   // about 200
 
     // 50% duty
-  //FTM2_C0V &= ~FTM_CnV_VAL_MASK;  // clear first
-  FTM2_C0V = (period >> 1);  // about 200 / 2 = 100
+	//FTM2_C0V &= ~FTM_CnV_VAL_MASK;  // clear first
+	FTM2_C0V = (period >> 1);  // about 200 / 2 = 100
 
     // Set edge-aligned mode
     FTM2_C0SC |= FTM_CnSC_MSB_MASK;
@@ -207,11 +245,11 @@ void init_FTM2(){
     FTM2_SC &= ~FTM_SC_TOIE_MASK;
 
     // No prescalar, system clock
-  FTM2_SC &= ~FTM_SC_PS_MASK;
+	FTM2_SC &= ~FTM_SC_PS_MASK;
     FTM2_SC |= (0x01 << FTM_SC_CLKS_SHIFT);
 
-  // Enable interrupt
-  FTM2_SC |= FTM_SC_TOIE_MASK;
+	// Enable interrupt
+	FTM2_SC |= FTM_SC_TOIE_MASK;
 
     // Set up interrupt
     NVIC_EnableIRQ(FTM2_IRQn);
@@ -219,15 +257,23 @@ void init_FTM2(){
     return;
 }
 
-/* Initialization of PIT timer to control
-*       integration period
+/* init_PIT
+* Description:
+* 	Initialization of PIT timer to control integration period
+*
+* Parameters:
+*	void
+*
+* Returns:
+* 	void
 */
-void init_PIT(void){
+void init_PIT(void)
+{
     // Setup periodic interrupt timer (PIT)
     SIM_SCGC6 |= SIM_SCGC6_PIT_MASK;
 
     // Enable clock for timers
-  PIT_MCR &= ~PIT_MCR_MDIS_MASK;
+	PIT_MCR &= ~PIT_MCR_MDIS_MASK;
 
     // Enable timers to continue in debug mode
     PIT_MCR = PIT_MCR_FRZ_MASK;
@@ -251,13 +297,22 @@ void init_PIT(void){
 }
 
 
-/* Set up pins for GPIO
-*   PTB9        - camera clk
-*       PTB23       - camera SI
-*       PTB22       - red LED
+/* init_GPIO
+* Description:
+* 	Set up pins for GPIO
+*   PTB9    - camera clk
+*  	PTB23   - camera SI
+*   PTB22  	- red LED
+*
+* Parameters:
+*	void
+*
+* Returns:
+*	void
 */
-void init_GPIO(void){
-    // Enable LED and GPIO so we can see results // TODO:Check
+void init_GPIO(void)	
+{
+    // Enable LED and GPIO so we can see results
 
     //initialize clocks for each different port used.
     SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK; // Enables Clock on PORTB (LED)
@@ -265,14 +320,14 @@ void init_GPIO(void){
     //Configure Port Control Register for Inputs with pull enable and pull up resistor
 
     // Configure mux for Outputs
-    PORTB_PCR9 = PORT_PCR_MUX(1);  // camera  (clk)
-    PORTB_PCR22 = PORT_PCR_MUX(1);  // red   (LED)
-    PORTB_PCR23 = PORT_PCR_MUX(1);  // camera (SI)
+    PORTB_PCR9 = PORT_PCR_MUX(1);  	// camera  	(clk)
+    PORTB_PCR22 = PORT_PCR_MUX(1);  // red   	(LED)
+    PORTB_PCR23 = PORT_PCR_MUX(1);  // camera 	(SI)
 
     // Switch the GPIO pins to output mode
-    GPIOB_PDDR |= (1 << 9);  // camera  (clk)
-    GPIOB_PDDR |= (1 << 22);  // red   (LED)
-    GPIOB_PDDR |= (1 << 23);  // camera (SI)
+    GPIOB_PDDR |= (1 << 9);  	// camera  	(clk)
+    GPIOB_PDDR |= (1 << 22);  	// red   	(LED)
+    GPIOB_PDDR |= (1 << 23);  	// camera 	(SI)
 
     GPIOB_PDDR = (1 << 23) | (1 << 22) | (1 << 9);  // camera (SI)
 
@@ -282,32 +337,42 @@ void init_GPIO(void){
     return;
 }
 
-/* Set up ADC for capturing camera data */
-void init_ADC0(void) {
-  unsigned int calib;
-  // Turn on ADC0
-  SIM_SCGC6 |= SIM_SCGC6_ADC0_MASK; // Enables Clock on ADC0
+/* init_ADC0
+* Description:
+* 	Set up ADC for capturing camera data 
+* 
+* Parameters:
+* 	void
+*
+* Returns:
+* 	void
+*/
+void init_ADC0(void)
+{
+	unsigned int calib;
+	// Turn on ADC0
+	SIM_SCGC6 |= SIM_SCGC6_ADC0_MASK; // Enables Clock on ADC0
 
     // Single ended 16 bit conversion, no clock divider
     ADC0_CFG1 &= ~ADC_CFG1_ADIV_MASK; // No division
     ADC0_CFG1 |= ADC_CFG1_MODE(0x03); // single ended 16 bit
 
-  // Do ADC Calibration for Singled Ended ADC. Do not touch.
-  ADC0_SC3 = ADC_SC3_CAL_MASK;
-  while ( (ADC0_SC3 & ADC_SC3_CAL_MASK) != 0 );
-  calib = ADC0_CLP0; calib += ADC0_CLP1; calib += ADC0_CLP2;
-  calib += ADC0_CLP3; calib += ADC0_CLP4; calib += ADC0_CLPS;
-  calib = calib >> 1; calib |= 0x8000;
-  ADC0_PG = calib;
+	// Do ADC Calibration for Singled Ended ADC. Do not touch.
+	ADC0_SC3 = ADC_SC3_CAL_MASK;
+	while ( (ADC0_SC3 & ADC_SC3_CAL_MASK) != 0 );
+	calib = ADC0_CLP0; calib += ADC0_CLP1; calib += ADC0_CLP2;
+	calib += ADC0_CLP3; calib += ADC0_CLP4; calib += ADC0_CLPS;
+	calib = calib >> 1; calib |= 0x8000;
+	ADC0_PG = calib;
 
-  // Select hardware trigger.
-  ADC0_SC2 |= ADC_SC2_ADTRG_MASK;
+	// Select hardware trigger.
+	ADC0_SC2 |= ADC_SC2_ADTRG_MASK;
 
-  // Set to single ended mode
-  ADC0_SC1A = 0;
-  ADC0_SC1A |= ADC_SC1_AIEN_MASK;
+	// Set to single ended mode
+	ADC0_SC1A = 0;
+	ADC0_SC1A |= ADC_SC1_AIEN_MASK;
     ADC0_SC1A &= ~ADC_SC1_DIFF_MASK;
-  ADC0_SC1A &= ~ADC_SC1_ADCH(0x1F);
+	ADC0_SC1A &= ~ADC_SC1_ADCH(0x1F);
 
     // Set up FTM2 trigger on ADC0
     SIM_SOPT7 &= ~(0xF << SIM_SOPT7_ADC0TRGSEL_SHIFT);
@@ -316,5 +381,5 @@ void init_ADC0(void) {
     SIM_SOPT7 &= ~SIM_SOPT7_ADC0PRETRGSEL_MASK; // Pretrigger A
 
     // Enable NVIC interrupt
-  NVIC_EnableIRQ(ADC0_IRQn);
+	NVIC_EnableIRQ(ADC0_IRQn);
 }

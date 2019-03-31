@@ -110,34 +110,3 @@ void uart3_init()
     UART3_C2 |= UART_C2_RE_MASK;
 }
 
-uint8_t getChar()
-{
-    /* Wait until there is space for more data in the receiver buffer*/
-    while ((UART0_S1 & (1 << 5)) == 0);
-
-    /* Return the 8-bit data from the receiver */
-    return UART0_D;
-}
-
-void putChar(char ch)
-{
-    /* Wait until transmission of previous bit is complete */
-    while ((UART0_S1 & (1 << 7)) == 0);
-        
-    /* Send the character */
-    UART0_D = ch;
-}
-
-void put(char *ptr_str)
-{
-    while(*ptr_str)
-    putChar(*ptr_str++);
-}
-
-void putnumU(int i)
-{
-    char num[10];
-    sprintf( num, "%d", i );
-    put( num );
-}
-

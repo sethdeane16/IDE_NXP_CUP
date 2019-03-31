@@ -9,3 +9,4 @@
 .\objects\main.o: uart.h
 .\objects\main.o: camera.h
 .\objects\main.o: pwm.h
+.\objects\main.o: common.h
