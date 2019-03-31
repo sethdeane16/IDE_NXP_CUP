@@ -383,62 +383,67 @@
             <File>
               <FileName>camera.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\camera.c</FilePath>
+              <FilePath>.\SRC\camera.c</FilePath>
             </File>
             <File>
               <FileName>camera.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\camera.h</FilePath>
-            </File>
-            <File>
-              <FileName>isr.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\isr.c</FilePath>
-            </File>
-            <File>
-              <FileName>isr.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\isr.h</FilePath>
-            </File>
-            <File>
-              <FileName>main.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\main.c</FilePath>
-            </File>
-            <File>
-              <FileName>MK64F12.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\MK64F12.h</FilePath>
-            </File>
-            <File>
-              <FileName>pwm.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\pwm.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\pwm.h</FilePath>
-            </File>
-            <File>
-              <FileName>uart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\uart.c</FilePath>
-            </File>
-            <File>
-              <FileName>uart.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\uart.h</FilePath>
+              <FilePath>.\SRC\camera.h</FilePath>
             </File>
             <File>
               <FileName>common.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\common.c</FilePath>
+              <FilePath>.\SRC\common.c</FilePath>
             </File>
             <File>
               <FileName>common.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\common.h</FilePath>
+              <FilePath>.\SRC\common.h</FilePath>
+            </File>
+            <File>
+              <FileName>isr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\isr.c</FilePath>
+            </File>
+            <File>
+              <FileName>isr.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SRC\isr.h</FilePath>
+            </File>
+            <File>
+              <FileName>main.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\main.c</FilePath>
+            </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SRC\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>MK64F12.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SRC\MK64F12.h</FilePath>
+            </File>
+            <File>
+              <FileName>pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\pwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SRC\pwm.h</FilePath>
+            </File>
+            <File>
+              <FileName>uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SRC\uart.h</FilePath>
             </File>
           </Files>
         </Group>

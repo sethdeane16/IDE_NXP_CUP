@@ -96,21 +96,18 @@ void putnumU(int i)
     put( num );
 }
 
-
-
-/* print_array
+/* print_array_u
 * Description:
-*   Prints array
+*   Prints unsigned array
 * 
 * Parameters:
 *   array - array that should be printed
-*   del - The delay in milliseconds
 *   length - length of the array
 * 
 * Returns:
 *   void
 */
-void print_array(uint16_t* array, int del, int length) {
+void print_array_u(uint16_t* array, int length) {
     sprintf(print_string,"\n\r["); // start value
     put(print_string);
     for (int i = 0; i < length; i++) {
@@ -119,5 +116,26 @@ void print_array(uint16_t* array, int del, int length) {
     }
     sprintf(print_string,"]\n\n\r"); // end value
     put(print_string);
-    delay(del);
+}
+
+/* print_array_s
+* Description:
+*   Prints signed array
+* 
+* Parameters:
+*   array - array that should be printed
+*   length - length of the array
+* 
+* Returns:
+*   void
+*/
+void print_array_s(int16_t* array, int length) {
+    sprintf(print_string,"\n\r["); // start value
+    put(print_string);
+    for (int i = 0; i < length; i++) {
+        sprintf(print_string,"%i ", array[i]);
+        put(print_string);
+    }
+    sprintf(print_string,"]\n\n\r"); // end value
+    put(print_string);
 }
