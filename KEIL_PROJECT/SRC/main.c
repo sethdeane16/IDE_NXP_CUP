@@ -2,9 +2,9 @@
  * Main Method for testing the PWM Code for the K64F
  * PWM signal can be connected to output pins are PC3 and PC4
  *
- * Author: Seth Deane & Brian Powers
- * Created:
- * Modified:
+ * file:    main.c
+ * Authors: Seth Deane & Brian Powers
+ * Created: March 21 2019
  */
 
 #include "MK64F12.h"
@@ -12,13 +12,7 @@
 #include "camera.h"
 #include "pwm.h"
 #include "common.h"
-
-void initialize();
-void en_interrupts();
-void delay();
-void weighted_filter(uint16_t *x,uint16_t *h, uint16_t *y, int xSize,  int hSize);
-void deriva_filter(uint16_t *x,int *h, int16_t *y, int xSize,  int hSize);
-void turnServo(double angle);
+#include "main.h"
 
 int main(void)
 {
@@ -211,7 +205,7 @@ void initialize()
     init_PIT(); // To trigger camera read based on integration time
 
 	// Initialize the FlexTimer
-	InitPWM();
+	init_PWM();
 }
 
 

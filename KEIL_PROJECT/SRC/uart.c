@@ -1,17 +1,28 @@
 /*
- * File:        Lab4_uart.c
- * Purpose:     Provide UART3 for Bluetooth
- *
- * Notes:       
- *
+ * Provide UART0 for Serial connection.
+ * Provide UART3 for Bluetooth connection.
+ * 
+ * File:    uart.c
+ * Authors: Seth Deane & Brian Powers
+ * Created: March 21 2019
  */
 
 #include "MK64F12.h"
 
 #define BAUD_RATE 9600      //default baud rate 
-#define SYS_CLOCK 20485760 //default system clock (see DEFAULT_SYSTEM_CLOCK  in system_MK64F12.c)
+#define SYS_CLOCK 20485760  //default system clock (see DEFAULT_SYSTEM_CLOCK  in system_MK64F12.c)
 
-void uart0_init()
+/* uart0_init
+ * Description:
+ *  initialize uart0 for serial connection
+ *
+ * Parameters:
+ *  void
+ *
+ * Returns:
+ *  void
+ */
+void uart0_init(void)
 {
     //define variables for baud rate and baud rate fine adjust
     uint16_t ubd, brfa;
@@ -60,7 +71,16 @@ void uart0_init()
     UART0_C2 |= UART_C2_RE_MASK;
 }
 
-
+/* uart3_init
+ * Description:
+ *  initialize uart3 for bluetooth connection
+ *
+ * Parameters:
+ *  void
+ *
+ * Returns:
+ *  void
+ */
 void uart3_init()
 {
     //define variables for baud rate and baud rate fine adjust

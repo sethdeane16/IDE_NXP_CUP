@@ -1,5 +1,5 @@
 /*
- * Freescale Cup linescan camera code
+ *  Freescale Cup linescan camera code
  *
  *  This method of capturing data from the line
  *  scan cameras uses a flex timer module, periodic
@@ -17,8 +17,9 @@
  *  PTB23     - camera SI
  *  ADC0_DP0  - camera AOut
  *
- * Author:  Seth Deane & Brian Powers
- * Date Began: 3/21/2019
+ * File:    camera.c
+ * Authors: Seth Deane & Brian Powers
+ * Created: 3/21/2019
  */
 
 #include "MK64F12.h"
@@ -63,13 +64,12 @@ uint16_t ADC0VAL;
 * Returns:
 *   uint16_t* - 128 int array of camera values
 */
-uint16_t* Camera_Main(void)
-{
+uint16_t* Camera_Main(void) {
+
     int i;
 
     if (debugcamdata) {
         // Every 2 seconds
-        //if (capcnt >= (2/INTEGRATION_TIME)) {
         if (capcnt >= (500)) {
             GPIOB_PCOR |= (1 << 22);
             // send the array over uart
@@ -88,7 +88,7 @@ uint16_t* Camera_Main(void)
 
     return line;
 
-} //Camera_Main
+} // Camera_Main
 
 /* ADC0_IRQHandler
 * Description:
@@ -100,11 +100,12 @@ uint16_t* Camera_Main(void)
 * Returns:
 *	void
 */
-void ADC0_IRQHandler(void)
-{
+void ADC0_IRQHandler(void) {
+
 	// Reading ADC0_RA clears the conversion complete flag
 	ADC0VAL = ADC0_RA;
-}
+
+} // ADC0_IRQHandler
 
 /* FTM2_IRQHandler
 * Description:
@@ -121,8 +122,8 @@ void ADC0_IRQHandler(void)
 * Returns:
 *	void
 */
-void FTM2_IRQHandler(void)
-{
+void FTM2_IRQHandler(void) {
+
     // Clear interrupt
     FTM2_SC &= ~FTM_SC_TOF_MASK;
 
@@ -156,8 +157,10 @@ void FTM2_IRQHandler(void)
         FTM2_SC &= ~FTM_SC_TOIE_MASK;
 
     }
+
     return;
-}
+
+} // FTM2_IRQHandler
 
 /* PIT0_IRQHandler
 * Description:
@@ -174,14 +177,14 @@ void FTM2_IRQHandler(void)
 * Returns:
 *	void
 */
-void PIT0_IRQHandler(void)
-{
-    if (debugcamdata)
-	{
+void PIT0_IRQHandler(void) {
+
+    if (debugcamdata){
         // Increment capture counter so that we can only
         //  send line data once every ~2 seconds
         capcnt += 1;
     }
+
     // Clear interrupt
     PIT_TFLG0 |= PIT_TFLG_TIF_MASK;
 
@@ -192,7 +195,8 @@ void PIT0_IRQHandler(void)
     FTM2_SC |= FTM_SC_TOIE_MASK;
 
     return;
-}
+
+} // PIT0_IRQHandler
 
 /* init_FTM2
 * Description:
@@ -204,8 +208,8 @@ void PIT0_IRQHandler(void)
 * Returns:
 * 	void
 */
-void init_FTM2(void)
-{
+void init_FTM2(void) {
+
     // Enable clock
     SIM_SCGC6 |= SIM_SCGC6_FTM2_MASK;
 
@@ -255,7 +259,8 @@ void init_FTM2(void)
     NVIC_EnableIRQ(FTM2_IRQn);
 
     return;
-}
+
+} // init_FTM2
 
 /* init_PIT
 * Description:
@@ -267,8 +272,8 @@ void init_FTM2(void)
 * Returns:
 * 	void
 */
-void init_PIT(void)
-{
+void init_PIT(void) {
+
     // Setup periodic interrupt timer (PIT)
     SIM_SCGC6 |= SIM_SCGC6_PIT_MASK;
 
@@ -293,8 +298,10 @@ void init_PIT(void)
 
     // Enable PIT interrupt in the interrupt controller
     NVIC_EnableIRQ(PIT0_IRQn);
+    
     return;
-}
+
+} // init_PIT
 
 
 /* init_GPIO
@@ -310,9 +317,7 @@ void init_PIT(void)
 * Returns:
 *	void
 */
-void init_GPIO(void)	
-{
-    // Enable LED and GPIO so we can see results
+void init_GPIO(void) {
 
     //initialize clocks for each different port used.
     SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK; // Enables Clock on PORTB (LED)
@@ -335,11 +340,12 @@ void init_GPIO(void)
     GPIOB_PSOR = (1UL << 22);  // red off   (LED)
 
     return;
-}
+
+} // init_GPIO
 
 /* init_ADC0
 * Description:
-* 	Set up ADC for capturing camera data 
+* 	Set up ADC for digitizing camera data 
 * 
 * Parameters:
 * 	void
@@ -347,8 +353,8 @@ void init_GPIO(void)
 * Returns:
 * 	void
 */
-void init_ADC0(void)
-{
+void init_ADC0(void) {
+
 	unsigned int calib;
 	// Turn on ADC0
 	SIM_SCGC6 |= SIM_SCGC6_ADC0_MASK; // Enables Clock on ADC0
@@ -382,4 +388,5 @@ void init_ADC0(void)
 
     // Enable NVIC interrupt
 	NVIC_EnableIRQ(ADC0_IRQn);
-}
+    
+} // init_ADC0

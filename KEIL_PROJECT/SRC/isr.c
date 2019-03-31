@@ -1,5 +1,9 @@
 /*
- * isr.c
+ * TODO
+ * 
+ * File:    isr.c
+ * Authors: Seth Deane & Brian Powers
+ * Created: March 21 2019
  */
 
 #include <stdio.h>
@@ -7,7 +11,8 @@
 #include "uart.h"
 #include "isr.h"
 
-//variables global to the IRQ handlers which dictates if timer is enabled &  timer counter
+// variables global to the IRQ handlers which dictates
+// if timer is enabled &  timer counter
 int sw2Pressed = 0; // 1 for pressed
 int ftmCounter = 0; // ftm counter
 
@@ -95,6 +100,7 @@ void PORTA_IRQHandler(void)
 /* PORTC_IRQHandler
 * Description:
 * 	TODO
+*   switch 2
 *
 * Parameters:
 * 	void
@@ -102,14 +108,13 @@ void PORTA_IRQHandler(void)
 * Returns:
 *	void
 */
-void PORTC_IRQHandler(void){ //For switch 2
+void PORTC_IRQHandler(void) {
 
     // clear the interrupt
     PORTC_PCR6 |= PORT_PCR_ISF_MASK;
 
     // Switch 2, pressed
-    if((GPIOC_PDIR & (1 << 6)) == 0)
-    {
+    if((GPIOC_PDIR & (1 << 6)) == 0) {
         // Set a local variable to affect the timer2 function
         sw2Pressed = 1;
 
@@ -123,8 +128,7 @@ void PORTC_IRQHandler(void){ //For switch 2
         GPIOB_PCOR = (1UL << 21); // blue led on
     }
 
-    else
-    {
+    else {
         // reset the local variable to affect the timer2 fucntion
         sw2Pressed = 0;
 

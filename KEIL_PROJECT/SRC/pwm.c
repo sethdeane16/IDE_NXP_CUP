@@ -2,19 +2,19 @@
  * Pulse-Width-Modulation Code for K64
  * PWM signal can be connected to output pins PC3 and PC4
  *
- * Author: Brent Dimmig <bnd8678@rit.edu>
- * Modified by:
- * Created: 2/20/2014
- * Modified: 3/07/2015
+ * File:    pwm.c
+ * Authors: Seth Deane & Brian Powers
+ * Created: March 21 2019
  */
+
 #include "MK64F12.h"
 #include "pwm.h"
 
-/*From clock setup 0 in system_MK64f12.c*/
-#define DEFAULT_SYSTEM_CLOCK 20485760u /* Default System clock value */
+/* From clock setup 0 in system_MK64f12.c*/
+#define DEFAULT_SYSTEM_CLOCK    20485760u // Default System clock value
 #define CLOCK                   20485760u
 #define PWM_FREQUENCY           10000
-#define SERVO_FREQUENCY   50
+#define SERVO_FREQUENCY         50
 #define FTM0_MOD_VALUE          (CLOCK/PWM_FREQUENCY)
 #define FTM3_MOD_VALUE          (CLOCK/128/SERVO_FREQUENCY)
 
@@ -23,9 +23,9 @@ static volatile unsigned int PWM3Tick = 0;
 
 /*
  * Change the Motor Duty Cycle and Frequency
- * @param DutyCycle (0 to 100)
- * @param Frequency (~1000 Hz to 20000 Hz)
- * @param dir: 1 for C4 active, else C3 active
+ *  DutyCycle - (0 to 100)
+ *  Frequency - (~1000 Hz to 20000 Hz)
+ *  dir - 1 for C4 active, else C3 active
  */
 void SetMotorDutyCycle(unsigned int DutyCycle, unsigned int Frequency, int dir)
 {
@@ -56,12 +56,15 @@ void SetMotorDutyCycle(unsigned int DutyCycle, unsigned int Frequency, int dir)
 
 
 /* SetServoDutyCycle
-* Description:
-*	Change the Servo Duty Cycle and Frequency
-*
-* Parameters:
-* 	DutyCycle - 4.6 to 9.14545 are full left and full right respectively.
-*/
+ * Description:
+ *  Change the Servo Duty Cycle
+ *
+ * Parameters:
+ *  DutyCycle - 4.6 to 9.14545 are full left and full right respectively.
+ * 
+ * Returns:
+ *  void
+ */
 void SetServoDutyCycle(double DutyCycle)
 {
     // Calculate the new cutoff value
@@ -75,10 +78,17 @@ void SetServoDutyCycle(double DutyCycle)
 }
 
 
-/*
- * Initialize the FlexTimer for PWM
+/* init_PWM
+ * Description:
+ *  Initialize the FlexTimer for PWM
+ *
+ * Parameters:
+ *  void
+ *
+ * Returns:
+ *  void
  */
-void InitPWM()
+void init_PWM(void)
 {
     // 12.2.13 Enable the Clock to the FTM0 Module
     SIM_SCGC6 |= SIM_SCGC6_FTM0_MASK;
@@ -141,8 +151,6 @@ void InitPWM()
     // Channel 1
     FTM0_C1SC |= FTM_CnSC_MSB_MASK | FTM_CnSC_ELSB_MASK;
     FTM0_C1SC &= ~FTM_CnSC_ELSA_MASK;
-
-
 
     FTM3_C4SC |= FTM_CnSC_MSB_MASK | FTM_CnSC_ELSB_MASK;
     FTM3_C4SC &= ~FTM_CnSC_ELSA_MASK;
