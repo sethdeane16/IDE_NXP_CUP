@@ -15,19 +15,22 @@
 #include "main.h"
 
 #define     OTE     128 // one twenty eight
-// #define     SF      64
-// #define     MARGIN  4
+#define     SF      64
+#define     MARGIN  3
 #define     DEBUG   1
-// TODO: log max and min servo values?
+#define     SERVMIN 4.8
+#define     SERVMAX 9.14545
+#define     SERVMID ((SERVMIN+SERVMAX)/2)
 
 
+struct greaterSmaller {
+ int greater, smaller;
+};
 
- struct greaterSmaller {
-     int greater, smaller;
- };
+typedef struct greaterSmaller Struct;
 
- typedef struct greaterSmaller Struct;
 Struct LeftRightIndex(int16_t* array, int size);
+void DriveAllNight(Struct left_right);
 
 int main(void)
 {
@@ -65,7 +68,7 @@ int main(void)
         convolve(median_sig, weight_fil, weight_sig, OTE, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
 
         // Correct the zeros at the beginning
-        for (int k = 2; k < OTE-2; k++){        
+        for (int k = 2; k < OTE-2; k++){
             weight_sig[k] = weight_sig[k+2];
         }
         weight_sig[0] = weight_sig[2];
@@ -89,12 +92,14 @@ int main(void)
             put("derivative_sig");
             print_array_s(deriv_sig, OTE);
         }
-        
-        char taco[100];
-        Struct jr = LeftRightIndex(deriv_sig, OTE);
-        sprintf(taco,"%d, %d\n\r",jr.greater, jr.smaller);
-        put(taco);
-        
+
+        if (DEBUG){
+            char taco[100];
+            Struct jr = LeftRightIndex(deriv_sig, OTE);
+            sprintf(taco,"%d, %d\n\r",jr.greater, jr.smaller);
+            put(taco);
+        }
+
         while(1){}
 
 
@@ -122,29 +127,6 @@ int main(void)
         // DriveAllNight(LeftRightIndex(deriv_array, sizeof(deriv_array)))
 
         delay(50);
-        // FOR LATER: Base off previous state? And use difference to determine how hard to turn
-        // Could be function
-        // Distance from left and right to middle
-        // Figure out margin use margin to determine how much to turn
-        // delta_r = right_idx - HALF;
-        // delta_l = HALF - left_idx;
-        // if (delta_r > delta_l + MARGIN)
-        // {
-        //     //steer right based off servo
-        //     SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        //     SetServoDutyCycle(8);
-        // }
-        // else if(delta_l > delta_r + MARGIN)
-        // {
-        //     //steer left based off servo
-        //     SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        //     SetServoDutyCycle(8);
-        // }
-        // else
-        // {
-        //     SetMotorDutyCycle(40, 10000, 1);		// C4 Active
-        //     SetServoDutyCycle(8);
-        // }
     }
 
 	return 0;
@@ -234,9 +216,9 @@ void median_filter(uint16_t *x, uint16_t *y, int x_size) {
  *  Filters a 1D signal with the given inputs.
  *
  * Parameters:
- *  double x - input array
- *  double h - filter array
- *  double y - output array
+ *  uint16_t x - input array
+ *  int16_t h - filter array
+ *  uint16_t y - output array
  *  int xSize - length of x array
  *  int hSize - length of h array
  *	int correction - correction factor for given filter
@@ -258,7 +240,22 @@ void convolve(uint16_t *x, int16_t *h, uint16_t *y, int xSize, int hSize, int co
     }
 }
 
-
+/* der_convolve
+ * Description:
+ *  Filters to the derivative of a given signal.
+ *
+ * Parameters:
+ *  uint16_t x - input array
+ *  int16_t h - filter array
+ *  int16_t y - output array
+ *  int xSize - length of x array
+ *  int hSize - length of h array
+ *	int correction - correction factor for given filter
+ *									 (e.g. if filter is 1,2,1 correction is sum = 4)
+ *
+ * Returns:
+ * 	void
+ */
 void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int correction) {
     // size of y (output vector) needs to be the same size as f (input vector)
     // start hSizein so we don’t index less than 0  (boundary condition)
@@ -314,36 +311,43 @@ void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int
  }
 
 
-/* DriveAllNight
- * Description:
- *  Determine whether to turn or drive straight
- *
- * Parameters:
- *  Struct left_right - input structure with the index of left and right side
- *
- * Returns:
- *  void
- */
-// void DriveAllNight(Struct left_right){
-//     // Assumption left is the maximum deriv value and is lower index
-//     double left_delta = SF - left_right.greater;
-//     // Assumption right is the minimum deriv value and is upper index
-//     double right_delta = left_right.smaller - SF;
-//     if (right_delta > left_delta + MARGIN)
-//     {
-//         //steer right based off servo
-//         turn_car((right_delta-left_delta)/2);
-//     }
-//     else if(left_delta > right_delta + MARGIN)
-//     {
-//         //steer left based off servo
-//         turn_car((right_delta-left_delta)/2);
-//     }
-//     else
-//     {
-//         drive_straight();
-//     }
-// }
+ /* DriveAllNight
+  * Description:
+  *  Determine whether to turn or drive straight
+  *
+  * Parameters:
+  *  Struct left_right - input structure with the index of left and right side
+  *
+  * Returns:
+  *  void
+  */
+ // void DriveAllNight(Struct left_right){
+ //     // Assumption left is the maximum deriv value and is lower index
+ //     double left_delta = SF - left_right.greater;
+ //     // Assumption right is the minimum deriv value and is upper index
+ //     double right_delta = left_right.smaller - SF;
+ //     double middle = (left_right.smaller - left_right.greater)/2;
+ //     if (DEBUG)
+ //     {
+ //         char tacos[100];
+ //         sprintf(tacos,"%d, %d, %d\n\r",left_delta, right_delta, middle);
+ //         put(tacos);
+ //     }
+ //     if (right_delta > left_delta + MARGIN)
+ //     {
+ //         //steer right based off servo
+ //         TurnCar(middle);
+ //     }
+ //     else if(left_delta > right_delta + MARGIN)
+ //     {
+ //         //steer left based off servo
+ //         TurnCar(middle);
+ //     }
+ //     else
+ //     {
+ //         DriveStraight();
+ //     }
+ // }
 
 
 /* turn_car
@@ -363,12 +367,54 @@ void turn_car(double angle){
     double dutycycle = 4.8 + (angle / (double) 29);
     SetServoDutyCycle(dutycycle);
 }
+/* TurnCar
+ * Description:
+ *  Turn the car with a standard value range
+ *
+ * Parameters:
+ *  double index - value from 0 to 127 where...
+ * 	               0 is left,
+ *                 64 is straight,
+ *                 127 is right
+ *
+ * Returns:
+ *  void
+ */
+// void TurnCar(double index){
+//     double dutycycle = TurnConversion(index);
+//     SetServoDutyCycle(dutycycle);
+// }
 
-/* drive_straight
+/* DriveStraight
  * Description:
  *  Have the servos stay or switch to a central position
  */
-// void drive_straight(){
+// void DriveStraight(){
 //     // dutycycle for straight
-//     SetServoDutyCycle(dutycycle);
+//     SetServoDutyCycle(SERVMID);
+// }
+
+
+/* TurnConversion
+ * Description:
+ *  Determine the position for the servos based on the index
+ *
+ * Parameters:
+ *  double index - value from 0 to 127 where... (won't be min or max it's mid)
+ *
+ * Returns:
+ *  double - the dutycycle for the servo
+ */
+// double TurnConversion(double index){
+//     // dutycycle for straight
+//     double servrange = SERVMAX-SERVMIN;
+//     double indexrange = OTE
+//     double servovalue = (((index - OTE) * servrange) / OTE) + SERVMIN
+//     if (DEBUG)
+//     {
+//         char tacoes[100];
+//         sprintf(tacoes,"%d\n\r",servovalue);
+//         put(tacoes);
+//     }
+//     return servovalue;
 // }
