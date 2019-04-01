@@ -15,7 +15,15 @@
 #include "main.h"
 
 #define     OTE     128 // one twenty eight
+// #define     SF      64
+// #define     MARGIN  4
 #define     DEBUG   0
+
+// struct greaterSmaller {
+//     int greater, smaller;
+// };
+//
+// typedef struct greaterSmaller Struct;
 
 int main(void)
 {
@@ -27,31 +35,31 @@ int main(void)
     while(1){
         // Read Trace Camera
         camera_sig = Camera_Main();
-        
+
         // print camera signal
         if (DEBUG) {
             put("camera_sig");
             print_array_u(camera_sig, OTE);
         }
-        
+
         /*****************************
          Normalize Trace
         *****************************/
         // step 1) Median filter
         uint16_t median_sig[OTE];
         median_filter(camera_sig, median_sig, OTE);
-        
+
         // print median signal
         if (DEBUG) {
             put("median_sig");
             print_array_u(median_sig, OTE);
         }
-        
+
         // step 2) Weighted average filter
         int16_t weight_fil[5] = {1,2,4,2,1};
         uint16_t weight_sig[OTE];
         convolve(median_sig, weight_fil, weight_sig, OTE, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
-        
+
         // print clean signal
         if (DEBUG) {
             put("weight_sig");
@@ -68,19 +76,19 @@ int main(void)
 //            put("derivative_sig");
 //            print_array_s(deriv_sig, OTE);
 //        }
-//        
+//
 //        // step 4) Weighted average filter
 //        convolve(deriv_sig, weight_fil, weight_sig, OTE, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
-//        
+//
 //        // print clean signal
 //        if (DEBUG) {
 //            put("weight_sig2");
 //            print_array_u(weight_sig, OTE);
 //        }
-        
+
 //        while(1){}
 
-        
+
         /* Find Left and Right edge */
         // (Assuming left to right read)
         // Left is max of derivative Right is min
@@ -91,7 +99,7 @@ int main(void)
                 left_index = i;
             }
         }
-        
+
         for (int i=OTE-1; i >= 0; i--) {
             if (weight_sig[i] > 40000) {
                 right_index = i;
@@ -100,8 +108,9 @@ int main(void)
 
         double turn = ((double)right_index + (double)left_index) / (double)2;
 
-
         turn_car(turn);
+
+        // DriveAllNight(LeftRightIndex(deriv_array, sizeof(deriv_array)))
 
         delay(50);
         // FOR LATER: Base off previous state? And use difference to determine how hard to turn
@@ -132,10 +141,37 @@ int main(void)
 	return 0;
 }
 
+
+/* initialize
+* Description:
+*   Function that contains all the initialization function
+*
+* Parameters:
+*   void
+*
+* Returns:
+*   void
+*/
+void initialize(void) {
+	// Initialize UART
+	uart0_init();
+	uart3_init();
+
+    // Initialize Camera
+    init_GPIO(); // For CLK and SI output on GPIO
+    init_FTM2(); // To generate CLK, SI, and trigger ADC
+    init_ADC0();
+    init_PIT(); // To trigger camera read based on integration time
+
+	// Initialize the FlexTimer
+	init_PWM();
+}
+
+
 /* median_filter
  * Description:
  *  Apply a median filter to get rid of any peaks in the signal
- * 
+ *
  * Parameters:
  *  double &x - input array
  *  double &y - output array
@@ -147,7 +183,7 @@ int main(void)
 void median_filter(uint16_t *x, uint16_t *y, int x_size) {
     // A three point median filter
     for (int i=0; i < x_size; i++) {
-        
+
         // first element
         if (i == 0) {
             if(x[i] < x[i+1]) {
@@ -157,7 +193,7 @@ void median_filter(uint16_t *x, uint16_t *y, int x_size) {
                 y[i] = x[i+1];
             }
         }
-        
+
         // last element
         else if(i == x_size - 1) {
             if(x[i] > x[i-1]) {
@@ -167,7 +203,7 @@ void median_filter(uint16_t *x, uint16_t *y, int x_size) {
                 y[i] = x[i-1];
             }
         }
-        
+
         // middle elements
         else {
             if ((x[i-1] <= x[i]) && (x[i-1] <= x[i+1])) {
@@ -183,10 +219,11 @@ void median_filter(uint16_t *x, uint16_t *y, int x_size) {
     }
 }
 
+
 /* convolve
  * Description:
  *  Filters a 1D signal with the given inputs.
- * 
+ *
  * Parameters:
  *  double x - input array
  *  double h - filter array
@@ -212,6 +249,7 @@ void convolve(uint16_t *x, int16_t *h, uint16_t *y, int xSize, int hSize, int co
     }
 }
 
+
 void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int correction) {
     // size of y (output vector) needs to be the same size as f (input vector)
     // start hSizein so we don’t index less than 0  (boundary condition)
@@ -225,41 +263,88 @@ void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int
     }
 }
 
-/* initialize
-* Description:
-*   Function that contains all the initialization function
-* 
-* Parameters:
-*   void
-* 
-* Returns:
-*   void
-*/
-void initialize(void) {
-	// Initialize UART
-	uart0_init();
-	uart3_init();
-    
-    // Initialize Camera
-    init_GPIO(); // For CLK and SI output on GPIO
-    init_FTM2(); // To generate CLK, SI, and trigger ADC
-    init_ADC0();
-    init_PIT(); // To trigger camera read based on integration time
 
-	// Initialize the FlexTimer
-	init_PWM();
-}
+// /* LeftRightIndex
+//  * Description:
+//  *  Find the left and right index of an array
+//  *
+//  * Parameters:
+//  *  int16_t array - input array
+//  *  int size - size of array
+//  *
+//  * Returns:
+//  *  int - min and max index
+//  */
+// Struct LeftRightIndex(int16_t array, int size)
+// {
+//     Struct s;
+//
+//     minimum = array[0];
+//     min_idx = 0;
+//     maximum = array[0];
+//     max_idx = 0;
+//
+//     for (c = 1; c < size; c++)
+//     {
+//         if (array[c] < minimum)
+//         {
+//            minimum = array[c];
+//            min_idx = c;
+//         }
+//         if (array[c] > maximum)
+//         {
+//            maximum = array[c];
+//            max_idx = c;
+//         }
+//     }
+//
+//     s.greater = max_idx;
+//     s.smaller = min_idx;
+//
+//     return s;
+// }
+
+
+// /* DriveAllNight
+//  * Description:
+//  *  Determine whether to turn or drive straight
+//  *
+//  * Parameters:
+//  *  Struct left_right - input structure with the index of left and right side
+//  *
+//  * Returns:
+//  *  void
+//  */
+// void DriveAllNight(Struct left_right){
+//     double left_delta = SF - left_right.greater;
+//     double right_delta = left_right.smaller - SF;
+//     if (right_delta > left_delta + MARGIN)
+//     {
+//         //steer right based off servo
+//         turn_car((right_delta-left_delta)/2);
+//     }
+//     else if(left_delta > right_delta + MARGIN)
+//     {
+//         //steer left based off servo
+//         turn_car((right_delta-left_delta)/2);
+//     }
+//     else
+//     {
+//         drive_straight();
+//     }
+// }
+
 
 /* turn_car
  * Description:
  *  Turn the car with a standard value range
- * 
+ *
  * Parameters:
- *  double angle - value from 0 to 127 where... 
+ *  double angle - value from 0 to 127 where...
  * 	               0 is left,
  *                 64 is straight,
  *                 127 is right
- * 
+ *
  * Returns:
  *  void
  */
@@ -267,3 +352,12 @@ void turn_car(double angle){
     double dutycycle = 4.8 + (angle / (double) 29);
     SetServoDutyCycle(dutycycle);
 }
+
+/* drive_straight
+ * Description:
+ *  Have the servos stay or switch to a central position
+ */
+// void drive_straight(){
+//     // dutycycle for straight
+//     SetServoDutyCycle(dutycycle);
+// }
