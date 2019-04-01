@@ -27,24 +27,46 @@ static volatile unsigned int PWM3Tick = 0;
  *  Frequency - (~1000 Hz to 20000 Hz)
  *  dir - 1 for C4 active, else C3 active
  */
-void SetMotorDutyCycle(unsigned int DutyCycle, unsigned int Frequency, int dir)
+void SetMotorDutyCycleL(unsigned int DutyCycle, unsigned int Frequency, int dir)
 {
     // Calculate the new cutoff value
     uint16_t mod = (uint16_t) (((CLOCK/Frequency) * DutyCycle) / 100);
   
-    // Set outputs 
+    // Forward
     if(dir==1){
         FTM0_C0V = mod;
         FTM0_C1V = 0;    
-         
+    }
+    // Backward
+    else{
+        FTM0_C0V = 0;
+        FTM0_C1V = mod;
+    }
+
+    // Update the clock to the new frequency
+    FTM0_MOD = (CLOCK/Frequency);
+}
+
+
+/*
+ * Change the Motor Duty Cycle and Frequency
+ *  DutyCycle - (0 to 100)
+ *  Frequency - (~1000 Hz to 20000 Hz)
+ *  dir - 1 for C4 active, else C3 active
+ */
+void SetMotorDutyCycleR(unsigned int DutyCycle, unsigned int Frequency, int dir)
+{
+    // Calculate the new cutoff value
+    uint16_t mod = (uint16_t) (((CLOCK/Frequency) * DutyCycle) / 100);
+  
+    // Forward
+    if(dir==1){ 
         FTM0_C2V = mod;
         FTM0_C3V = 0; 
         
     }
+    // Backward
     else{
-        FTM0_C0V = 0;
-        FTM0_C1V = mod;
-        
         FTM0_C2V = 0; 
         FTM0_C3V = mod;
     }
@@ -52,7 +74,6 @@ void SetMotorDutyCycle(unsigned int DutyCycle, unsigned int Frequency, int dir)
     // Update the clock to the new frequency
     FTM0_MOD = (CLOCK/Frequency);
 }
-
 
 
 /* SetServoDutyCycle
@@ -68,7 +89,7 @@ void SetMotorDutyCycle(unsigned int DutyCycle, unsigned int Frequency, int dir)
 void SetServoDutyCycle(double DutyCycle)
 {
     // Calculate the new cutoff value
-    uint16_t mod = (uint16_t) (((CLOCK/128/SERVO_FREQUENCY) * DutyCycle) / 100);
+    double mod = (double) (((CLOCK/128/SERVO_FREQUENCY) * DutyCycle) / 100);
 
     // Set outputs
 	FTM3_C4V = mod;

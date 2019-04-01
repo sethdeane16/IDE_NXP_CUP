@@ -22,6 +22,8 @@
 #define     SERV_MID            ((SERV_MIN+SERV_MAX)/2)
 #define     CENTER              72
 
+#define     DUTY                40
+
 #define     CAM_DEBUG           0
 #define     SER_DEBUG           0
 
@@ -107,8 +109,9 @@ int main(void)
          DRIVE BABY DRIVE
         *****************************/
         
-        TurnCar(64);
-        SetMotorDutyCycle(32, 10000, 1);
+        
+        SetMotorDutyCycleL(DUTY, 10000, 1);
+        SetMotorDutyCycleR(DUTY, 10000, 1);
         DriveAllNight(LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT));
 
     }
@@ -316,13 +319,39 @@ void DriveAllNight(Struct edge_index) {
     // steer right if on the left side of the track
     if (middle > CENTER + MARGIN) {
         TurnCar(edge_index.right);
+//        if (middle > CENTER + 2*MARGIN)
+//        {
+//            SetMotorDutyCycleL(DUTY, 10000, 1);
+//            SetMotorDutyCycleR(DUTY/2, 10000, 1);
+//            TurnCar(edge_index.right);
+//        }
+//        else
+//        {
+//            SetMotorDutyCycleL(DUTY, 10000, 1);
+//            SetMotorDutyCycleR(DUTY, 10000, 1);
+//            TurnCar(edge_index.right);
+//        }
     }
     // steer left if on the right side of the track
     else if(middle < CENTER - MARGIN) {
         TurnCar(edge_index.left);
+//        if (middle > CENTER - 2*MARGIN)
+//        {
+//            SetMotorDutyCycleL(DUTY/2, 10000, 1);
+//            SetMotorDutyCycleR(DUTY, 10000, 1);
+//            TurnCar(edge_index.left);
+//        }
+//        else
+//        {
+//            SetMotorDutyCycleL(DUTY, 10000, 1);
+//            SetMotorDutyCycleR(DUTY, 10000, 1);
+//            TurnCar(edge_index.left);
+//        }
     }
     // otherwise, drive straight
     else {
+//        SetMotorDutyCycleL(DUTY, 10000, 1);
+//        SetMotorDutyCycleR(DUTY, 10000, 1);
         TurnCar(SIXTY_FOUR);
     }
 }
@@ -344,7 +373,15 @@ void DriveAllNight(Struct edge_index) {
  */
 void TurnCar(uint16_t index){
     if ((index < ONE_TWENTY_EIGHT) && (index >= 0)) {
-        double dutycycle = 4.8 + ((double) index / (double) 29);
+        double dutycycle = SERV_MIN + ((double) index / (double) 29);
+        if (index < 50)
+        {
+            dutycycle = SERV_MIN;
+        }
+        else if (index > 100)
+        {
+            dutycycle = SERV_MAX;
+        }
         SetServoDutyCycle(dutycycle);
     }
 }
