@@ -14,17 +14,20 @@
 #include "common.h"
 #include "main.h"
 
-#define     OTE     128 // one twenty eight
-#define     SF      64
-#define     MARGIN  3
-#define     DEBUG   1
-#define     SERVMIN 4.8
-#define     SERVMAX 9.14545
-#define     SERVMID ((SERVMIN+SERVMAX)/2)
+#define     ONE_TWENTY_EIGHT    128
+#define     SIXTY_FOUR          64
+#define     MARGIN              3
+#define     SERV_MIN            4.8
+#define     SERV_MAX            9.14545
+#define     SERV_MID            ((SERV_MIN+SERV_MAX)/2)
+#define     CENTER              72
+
+#define     CAM_DEBUG           0
+#define     SER_DEBUG           0
 
 
 struct greaterSmaller {
- int greater, smaller;
+ int left, right;
 };
 
 typedef struct greaterSmaller Struct;
@@ -44,31 +47,31 @@ int main(void)
         camera_sig = Camera_Main();
 
         // print camera signal
-        if (DEBUG) {
+        if (CAM_DEBUG) {
             put("camera_sig");
-            print_array_u(camera_sig, OTE);
+            print_array_u(camera_sig, ONE_TWENTY_EIGHT);
         }
 
         /*****************************
          Normalize Trace
         *****************************/
         // step 1) Median filter
-        uint16_t median_sig[OTE];
-        median_filter(camera_sig, median_sig, OTE);
+        uint16_t median_sig[ONE_TWENTY_EIGHT];
+        median_filter(camera_sig, median_sig, ONE_TWENTY_EIGHT);
 
         // print median signal
-        if (DEBUG) {
+        if (CAM_DEBUG) {
             put("median_sig");
-            print_array_u(median_sig, OTE);
+            print_array_u(median_sig, ONE_TWENTY_EIGHT);
         }
 
         // step 2) Weighted average filter
         int16_t weight_fil[5] = {1,2,4,2,1};
-        uint16_t weight_sig[OTE];
-        convolve(median_sig, weight_fil, weight_sig, OTE, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
+        uint16_t weight_sig[ONE_TWENTY_EIGHT];
+        convolve(median_sig, weight_fil, weight_sig, ONE_TWENTY_EIGHT, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
 
         // Correct the zeros at the beginning
-        for (int k = 2; k < OTE-2; k++){
+        for (int k = 2; k < ONE_TWENTY_EIGHT-2; k++){
             weight_sig[k] = weight_sig[k+2];
         }
         weight_sig[0] = weight_sig[2];
@@ -77,56 +80,37 @@ int main(void)
         weight_sig[127] = weight_sig[125];
 
         // print clean signal
-        if (DEBUG) {
+        if (CAM_DEBUG) {
             put("weight_sig");
-            print_array_u(weight_sig, OTE);
+            print_array_u(weight_sig, ONE_TWENTY_EIGHT);
         }
 
         // step 3) Derivative filter
         int16_t deriv_fil[3] = {1,0,-1};
-        int16_t deriv_sig[OTE];
-        der_convolve(weight_sig, deriv_fil, deriv_sig, OTE, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
+        int16_t deriv_sig[ONE_TWENTY_EIGHT];
+        der_convolve(weight_sig, deriv_fil, deriv_sig, ONE_TWENTY_EIGHT, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
 
         // print derivative signal
-        if (DEBUG) {
+        if (CAM_DEBUG) {
             put("derivative_sig");
-            print_array_s(deriv_sig, OTE);
+            print_array_s(deriv_sig, ONE_TWENTY_EIGHT);
         }
 
-        if (DEBUG){
+        if (SER_DEBUG) {
             char taco[100];
-            Struct jr = LeftRightIndex(deriv_sig, OTE);
-            sprintf(taco,"%d, %d\n\r",jr.greater, jr.smaller);
+            Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
+            sprintf(taco,"%d, %d\n\r",jr.left, jr.right);
             put(taco);
         }
+        
+        /*****************************
+         DRIVE BABY DRIVE
+        *****************************/
+        
+        TurnCar(64);
+        SetMotorDutyCycle(32, 10000, 1);
+        DriveAllNight(LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT));
 
-        while(1){}
-
-
-        /* Find Left and Right edge */
-        // (Assuming left to right read)
-        // Left is max of derivative Right is min
-        int left_index;
-        int right_index;
-        for (int i=0; i < OTE; i++) {
-            if (weight_sig[i] > 40000) {
-                left_index = i;
-            }
-        }
-
-        for (int i=OTE-1; i >= 0; i--) {
-            if (weight_sig[i] > 40000) {
-                right_index = i;
-            }
-        }
-
-        double turn = ((double)right_index + (double)left_index) / (double)2;
-
-        turn_car(turn);
-
-        // DriveAllNight(LeftRightIndex(deriv_array, sizeof(deriv_array)))
-
-        delay(50);
     }
 
 	return 0;
@@ -281,140 +265,86 @@ void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int
  * Returns:
  *  int - min and max index
  */
- Struct LeftRightIndex(int16_t* array, int size)
- {
-     Struct s;
+Struct LeftRightIndex(int16_t* array, int size) {
+    Struct s;
 
-     int16_t minimum = array[0];
-     int min_idx = 0;
-     int16_t maximum = array[0];
-     int max_idx = 0;
+    int16_t minimum = array[0];
+    int min_idx = 0;
+    int16_t maximum = array[0];
+    int max_idx = 0;
 
-     for (int c = 1; c < size; c++)
-     {
-         if (array[c] < minimum)
-         {
+    for (int c = 1; c < size; c++)
+    {
+        if (array[c] < minimum)
+        {
             minimum = array[c];
             min_idx = c;
-         }
-         if (array[c] > maximum)
-         {
+        }
+        if (array[c] > maximum)
+        {
             maximum = array[c];
             max_idx = c;
-         }
-     }
+        }
+    }
 
-     s.greater = max_idx;
-     s.smaller = min_idx;
+    s.left = max_idx;
+    s.right = min_idx;
 
-     return s;
- }
-
-
- /* DriveAllNight
-  * Description:
-  *  Determine whether to turn or drive straight
-  *
-  * Parameters:
-  *  Struct left_right - input structure with the index of left and right side
-  *
-  * Returns:
-  *  void
-  */
- // void DriveAllNight(Struct left_right){
- //     // Assumption left is the maximum deriv value and is lower index
- //     double left_delta = SF - left_right.greater;
- //     // Assumption right is the minimum deriv value and is upper index
- //     double right_delta = left_right.smaller - SF;
- //     double middle = (left_right.smaller - left_right.greater)/2;
- //     if (DEBUG)
- //     {
- //         char tacos[100];
- //         sprintf(tacos,"%d, %d, %d\n\r",left_delta, right_delta, middle);
- //         put(tacos);
- //     }
- //     if (right_delta > left_delta + MARGIN)
- //     {
- //         //steer right based off servo
- //         TurnCar(middle);
- //     }
- //     else if(left_delta > right_delta + MARGIN)
- //     {
- //         //steer left based off servo
- //         TurnCar(middle);
- //     }
- //     else
- //     {
- //         DriveStraight();
- //     }
- // }
+    return s;
+}
 
 
-/* turn_car
+/* DriveAllNight
  * Description:
- *  Turn the car with a standard value range
+ *  Determine whether to turn or drive straight
+ *
+ * Parameters:
+ *  Struct edge_index - input structure with the index of
+ *                      left and right side of the track
+ *
+ * Returns:
+ *  void
+ */
+void DriveAllNight(Struct edge_index) {
+    
+    uint16_t middle = ((edge_index.right - edge_index.left)/2) + edge_index.left ;
+    
+    char tacos[100];
+    sprintf(tacos,"%d\n\r", middle);
+    put(tacos);
+    
+    // steer right if on the left side of the track
+    if (middle > CENTER + MARGIN) {
+        TurnCar(edge_index.right);
+    }
+    // steer left if on the right side of the track
+    else if(middle < CENTER - MARGIN) {
+        TurnCar(edge_index.left);
+    }
+    // otherwise, drive straight
+    else {
+        TurnCar(SIXTY_FOUR);
+    }
+}
+
+/* TurnCar
+ * Description:
+ *  Turn the car with a standard value range.
+ *  Takes an index and ouptuts the duty cycle to 
+ *  turn the servo the appropriate amount.
  *
  * Parameters:
  *  double angle - value from 0 to 127 where...
- * 	               0 is left,
+ * 	               0 is completely left,
  *                 64 is straight,
- *                 127 is right
+ *                 127 is completely right
  *
  * Returns:
  *  void
  */
-void turn_car(double angle){
-    double dutycycle = 4.8 + (angle / (double) 29);
-    SetServoDutyCycle(dutycycle);
+void TurnCar(uint16_t index){
+    if ((index < ONE_TWENTY_EIGHT) && (index >= 0)) {
+        double dutycycle = 4.8 + ((double) index / (double) 29);
+        SetServoDutyCycle(dutycycle);
+    }
 }
-/* TurnCar
- * Description:
- *  Turn the car with a standard value range
- *
- * Parameters:
- *  double index - value from 0 to 127 where...
- * 	               0 is left,
- *                 64 is straight,
- *                 127 is right
- *
- * Returns:
- *  void
- */
-// void TurnCar(double index){
-//     double dutycycle = TurnConversion(index);
-//     SetServoDutyCycle(dutycycle);
-// }
-
-/* DriveStraight
- * Description:
- *  Have the servos stay or switch to a central position
- */
-// void DriveStraight(){
-//     // dutycycle for straight
-//     SetServoDutyCycle(SERVMID);
-// }
-
-
-/* TurnConversion
- * Description:
- *  Determine the position for the servos based on the index
- *
- * Parameters:
- *  double index - value from 0 to 127 where... (won't be min or max it's mid)
- *
- * Returns:
- *  double - the dutycycle for the servo
- */
-// double TurnConversion(double index){
-//     // dutycycle for straight
-//     double servrange = SERVMAX-SERVMIN;
-//     double indexrange = OTE
-//     double servovalue = (((index - OTE) * servrange) / OTE) + SERVMIN
-//     if (DEBUG)
-//     {
-//         char tacoes[100];
-//         sprintf(tacoes,"%d\n\r",servovalue);
-//         put(tacoes);
-//     }
-//     return servovalue;
-// }
