@@ -17,14 +17,17 @@
 #define     OTE     128 // one twenty eight
 // #define     SF      64
 // #define     MARGIN  4
-#define     DEBUG   0
+#define     DEBUG   1
 // TODO: log max and min servo values?
 
-// struct greaterSmaller {
-//     int greater, smaller;
-// };
-//
-// typedef struct greaterSmaller Struct;
+
+
+ struct greaterSmaller {
+     int greater, smaller;
+ };
+
+ typedef struct greaterSmaller Struct;
+Struct LeftRightIndex(int16_t* array, int size);
 
 int main(void)
 {
@@ -61,33 +64,38 @@ int main(void)
         uint16_t weight_sig[OTE];
         convolve(median_sig, weight_fil, weight_sig, OTE, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
 
+        // Correct the zeros at the beginning
+        for (int k = 2; k < OTE-2; k++){        
+            weight_sig[k] = weight_sig[k+2];
+        }
+        weight_sig[0] = weight_sig[2];
+        weight_sig[1] = weight_sig[2];
+        weight_sig[126] = weight_sig[125];
+        weight_sig[127] = weight_sig[125];
+
         // print clean signal
         if (DEBUG) {
             put("weight_sig");
             print_array_u(weight_sig, OTE);
         }
 
-//        // step 3) Derivative filter
-//        int16_t deriv_fil[2] = {-5,5};
-//        int16_t deriv_sig[OTE];
-//        der_convolve(weight_sig, deriv_fil, deriv_sig, OTE, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
+        // step 3) Derivative filter
+        int16_t deriv_fil[3] = {1,0,-1};
+        int16_t deriv_sig[OTE];
+        der_convolve(weight_sig, deriv_fil, deriv_sig, OTE, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
 
-//        // print derivative signal
-//        if (DEBUG) {
-//            put("derivative_sig");
-//            print_array_s(deriv_sig, OTE);
-//        }
-//
-//        // step 4) Weighted average filter
-//        convolve(deriv_sig, weight_fil, weight_sig, OTE, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
-//
-//        // print clean signal
-//        if (DEBUG) {
-//            put("weight_sig2");
-//            print_array_u(weight_sig, OTE);
-//        }
-
-//        while(1){}
+        // print derivative signal
+        if (DEBUG) {
+            put("derivative_sig");
+            print_array_s(deriv_sig, OTE);
+        }
+        
+        char taco[100];
+        Struct jr = LeftRightIndex(deriv_sig, OTE);
+        sprintf(taco,"%d, %d\n\r",jr.greater, jr.smaller);
+        put(taco);
+        
+        while(1){}
 
 
         /* Find Left and Right edge */
@@ -276,34 +284,34 @@ void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int
  * Returns:
  *  int - min and max index
  */
-// Struct LeftRightIndex(int16_t array, int size)
-// {
-//     Struct s;
-//
-//     minimum = array[0];
-//     min_idx = 0;
-//     maximum = array[0];
-//     max_idx = 0;
-//
-//     for (c = 1; c < size; c++)
-//     {
-//         if (array[c] < minimum)
-//         {
-//            minimum = array[c];
-//            min_idx = c;
-//         }
-//         if (array[c] > maximum)
-//         {
-//            maximum = array[c];
-//            max_idx = c;
-//         }
-//     }
-//
-//     s.greater = max_idx;
-//     s.smaller = min_idx;
-//
-//     return s;
-// }
+ Struct LeftRightIndex(int16_t* array, int size)
+ {
+     Struct s;
+
+     int16_t minimum = array[0];
+     int min_idx = 0;
+     int16_t maximum = array[0];
+     int max_idx = 0;
+
+     for (int c = 1; c < size; c++)
+     {
+         if (array[c] < minimum)
+         {
+            minimum = array[c];
+            min_idx = c;
+         }
+         if (array[c] > maximum)
+         {
+            maximum = array[c];
+            max_idx = c;
+         }
+     }
+
+     s.greater = max_idx;
+     s.smaller = min_idx;
+
+     return s;
+ }
 
 
 /* DriveAllNight
