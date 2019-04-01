@@ -18,6 +18,7 @@
 // #define     SF      64
 // #define     MARGIN  4
 #define     DEBUG   0
+// TODO: log max and min servo values?
 
 // struct greaterSmaller {
 //     int greater, smaller;
@@ -264,17 +265,17 @@ void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int
 }
 
 
-// /* LeftRightIndex
-//  * Description:
-//  *  Find the left and right index of an array
-//  *
-//  * Parameters:
-//  *  int16_t array - input array
-//  *  int size - size of array
-//  *
-//  * Returns:
-//  *  int - min and max index
-//  */
+/* LeftRightIndex
+ * Description:
+ *  Find the left and right index of an array
+ *
+ * Parameters:
+ *  int16_t array - input array
+ *  int size - size of array
+ *
+ * Returns:
+ *  int - min and max index
+ */
 // Struct LeftRightIndex(int16_t array, int size)
 // {
 //     Struct s;
@@ -305,18 +306,20 @@ void der_convolve(uint16_t *x, int16_t *h, int16_t *y, int xSize, int hSize, int
 // }
 
 
-// /* DriveAllNight
-//  * Description:
-//  *  Determine whether to turn or drive straight
-//  *
-//  * Parameters:
-//  *  Struct left_right - input structure with the index of left and right side
-//  *
-//  * Returns:
-//  *  void
-//  */
+/* DriveAllNight
+ * Description:
+ *  Determine whether to turn or drive straight
+ *
+ * Parameters:
+ *  Struct left_right - input structure with the index of left and right side
+ *
+ * Returns:
+ *  void
+ */
 // void DriveAllNight(Struct left_right){
+//     // Assumption left is the maximum deriv value and is lower index
 //     double left_delta = SF - left_right.greater;
+//     // Assumption right is the minimum deriv value and is upper index
 //     double right_delta = left_right.smaller - SF;
 //     if (right_delta > left_delta + MARGIN)
 //     {
