@@ -18,11 +18,11 @@
 #define     ONE_TWENTY_EIGHT    128
 #define     SIXTY_FOUR          64
 #define     MARGIN              3
-#define     SERV_MIN            4.8
+#define     SERV_MIN            4.5
 #define     SERV_MAX            9
 #define     SERV_MID            (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
 
-#define     DUTY                40
+#define     DUTY                45
 
 #define     CAM_DEBUG           0
 #define     SER_DEBUG           0
@@ -37,6 +37,7 @@ struct greaterSmaller {
 typedef struct greaterSmaller Struct;
 Struct LeftRightIndex(int16_t* array, int size);
 void DriveAllNight(Struct left_right);
+void Filter(uint16_t* camera_sig, int16_t* deriv_sig);
 
 int main(void)
 {
@@ -47,107 +48,49 @@ int main(void)
     uint16_t* camera_sig;
     
     // Make sure wheels are straightened initally
-    SetServoDutyCycle(SERV_MID);
+    SetServoDutyCycle(SERV_MIN);
     
     // Initialize variables for PID control
-    double ServoTurnOld = 64;
-    double ErrOld1 = 0;
-    double ErrOld2 = 0;
+    double ServoTurnOld = 64.0;
+    double ErrOld1 = 0.0;
+    double ErrOld2 = 0.0;
     
     while(1){
+        
         // Read Trace Camera
         camera_sig = Camera_Main();
 
-        // print camera signal
-//        if (CAM_DEBUG) {
-//            put("camera_sig");
-//            print_array_u(camera_sig, ONE_TWENTY_EIGHT);
-//        }
-
-        /*****************************
-         Normalize Trace
-        *****************************/
-        // step 1) Median filter
-        uint16_t median_sig[ONE_TWENTY_EIGHT];
-        median_filter(camera_sig, median_sig, ONE_TWENTY_EIGHT);
-
-        // print median signal
-//        if (CAM_DEBUG) {
-//            put("median_sig");
-//            print_array_u(median_sig, ONE_TWENTY_EIGHT);
-//        }
-
-        // step 2) Weighted average filter
-        int16_t weight_fil[5] = {1,2,4,2,1};
-        uint16_t weight_sig[ONE_TWENTY_EIGHT];
-        convolve(median_sig, weight_fil, weight_sig, ONE_TWENTY_EIGHT, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
-
-        // Correct the zeros at the beginning
-        for (int k = 2; k < ONE_TWENTY_EIGHT-2; k++){
-            weight_sig[k] = weight_sig[k+2];
-        }
-        
-        // Get get rid of 4 zeros that are created by convolve function
-        weight_sig[0] = weight_sig[2];
-        weight_sig[1] = weight_sig[2];
-        weight_sig[126] = weight_sig[125];
-        weight_sig[127] = weight_sig[125];
-
-        // print clean signal
-//        if (CAM_DEBUG) {
-//            put("weight_sig");
-//            print_array_u(weight_sig, ONE_TWENTY_EIGHT);
-//        }
-
-        // step 3) Derivative filter
-        int16_t deriv_fil[3] = {1,0,-1};
+        // Filter linescan camera signal
         int16_t deriv_sig[ONE_TWENTY_EIGHT];
-        der_convolve(weight_sig, deriv_fil, deriv_sig, ONE_TWENTY_EIGHT, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
-
-        // print derivative signal
-//        if (CAM_DEBUG) {
-//            put("derivative_sig");
-//            print_array_s(deriv_sig, ONE_TWENTY_EIGHT);
-//        }
-
-//        if (SER_DEBUG) {
-//            char taco[100];
-//            Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
-//            int da_mid = jr.left + ((jr.right-jr.left)/2);
-//            int delta = abs(SIXTY_FOUR-da_mid);
-//            sprintf(taco,"%d, %d, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
-//            put(taco);
-//        }
-
-        /*****************************
-         DRIVE BABY DRIVE
-        *****************************/
+        Filter(camera_sig, deriv_sig);
 
         // Turn on motors
-//        SetMotorDutyCycleL(DUTY, 10000, 1);
-//        SetMotorDutyCycleR(DUTY, 10000, 1);
+        SetMotorDutyCycleL(DUTY, 10000, 1);
+        SetMotorDutyCycleR(DUTY, 10000, 1);
         
         // Calculate center of track
         Struct edge_index = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
         int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left ;
         
-        double Kp = 0.30;
-        double Ki = 0;   // default .15
-        double Kd = 0;   // default .20
 
-        double Err = (SIXTY_FOUR - (double) calculated_middle);
-        double ServoTurn = ServoTurnOld + \
-                           Kp * (Err-ErrOld1) + \
-                           Ki * (Err+ErrOld1)/2 + \
+        // combos that work, kp=6, ki=0, kd=2
+        double Kp = 5.0;
+        double Ki = 0.0;   // default .15 try .02
+        double Kd = 2.0;   // default .20
+
+        double Err = (double) SIXTY_FOUR - (double) calculated_middle;
+        double ServoTurn = ServoTurnOld - \
+                           Kp * (Err-ErrOld1) - \
+                           Ki * (Err+ErrOld1)/2 - \
                            Kd * (Err - 2*ErrOld1 + ErrOld2);
+        char taco[10000];
+        sprintf(taco,"%3.2lf\n\r",ServoTurn);
+        put(taco);
         
-//        ServoTurn = clip(ServoTurn,-,+)
-//        char tado[100];
-//        sprintf(tado,"%lf, %lf, %d\n\r",Err,ServoTurn,calculated_middle);
-//        put(tado);
         double servo_range = (double) SERV_MAX - (double) SERV_MIN;
         double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
         double dutycycle = (double) SERV_MIN + (ServoTurn / (double) range_mult);
+        
         if (dutycycle > SERV_MAX)
         {
             SetServoDutyCycle(SERV_MAX);
@@ -161,9 +104,6 @@ int main(void)
             SetServoDutyCycle(dutycycle);
         }
         ServoTurnOld = ServoTurn;
-        char taco[100];
-        sprintf(taco,"%lf, %lf, %d\n\r",Err,ServoTurn,calculated_middle);
-        put(taco);
         ErrOld2 = ErrOld1;
         ErrOld1 = Err;
      
@@ -438,26 +378,68 @@ void TurnCar(uint16_t index){
 }
 
 
-
-
- void TurnPID(int calculated_middle)
+/* Filters
+ * Description:
+ *  Take an input signal from the linescan camera
+ *  and output a struct
+ *
+ * Parameters:
+ *  camera_sig - Camera Input signal.
+ *  deriv_sig - Derivative of smoothed signal.
+ *
+ * Returns:
+ *  void
+ */
+ void Filter(uint16_t* camera_sig, int16_t* deriv_sig)
  {
-     // Main
-     double ServoTurnOld = 0;
-     double ErrOld1 = 0;
-     double ErrOld2 = 0;
-     double Kp = 0.30;
-     double Ki = 0.15;
-     double Kd = 0.20;
+        // step 1) Median filter
+        uint16_t median_sig[ONE_TWENTY_EIGHT];
+        median_filter(camera_sig, median_sig, ONE_TWENTY_EIGHT);
 
-     double Err = SIXTY_FOUR - (double) calculated_middle;
-     double ServoTurn = ServoTurnOld + \
-                 Kp * (Err-ErrOld1) + \
-                 Ki * (Err+ErrOld1)/2 + \
-                 Kd * (Err - 2*ErrOld1 + ErrOld2);
+        // print median signal
+        if (CAM_DEBUG) {
+            put("median_sig");
+            print_array_u(median_sig, ONE_TWENTY_EIGHT);
+        }
 
-     // Main
-     ServoTurnOld = ServoTurn;
-     ErrOld2 = ErrOld1;
-     ErrOld1 = Err;
+        // step 2) Weighted average filter
+        int16_t weight_fil[5] = {1,2,4,2,1};
+        uint16_t weight_sig[ONE_TWENTY_EIGHT];
+        convolve(median_sig, weight_fil, weight_sig, ONE_TWENTY_EIGHT, sizeof(weight_fil)/sizeof(weight_fil[0]),10);
+
+        // Correct the zeros at the beginning
+        for (int k = 2; k < ONE_TWENTY_EIGHT-2; k++){
+            weight_sig[k] = weight_sig[k+2];
+        }
+        
+        // Get get rid of 4 zeros that are created by convolve function
+        weight_sig[0] = weight_sig[2];
+        weight_sig[1] = weight_sig[2];
+        weight_sig[126] = weight_sig[125];
+        weight_sig[127] = weight_sig[125];
+
+        // print clean signal
+        if (CAM_DEBUG) {
+            put("weight_sig");
+            print_array_u(weight_sig, ONE_TWENTY_EIGHT);
+        }
+
+        // step 3) Derivative filter
+        int16_t deriv_fil[3] = {1,0,-1};
+        der_convolve(weight_sig, deriv_fil, deriv_sig, ONE_TWENTY_EIGHT, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
+
+        // print derivative signal
+        if (CAM_DEBUG) {
+            put("derivative_sig");
+            print_array_s(deriv_sig, ONE_TWENTY_EIGHT);
+        }
+
+        if (SER_DEBUG) {
+            char taco[100];
+            Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
+            int da_mid = jr.left + ((jr.right-jr.left)/2);
+            int delta = abs(SIXTY_FOUR-da_mid);
+            sprintf(taco,"%d, %d, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
+            put(taco);
+        }
  }
