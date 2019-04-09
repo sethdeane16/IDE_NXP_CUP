@@ -7,6 +7,7 @@
  * Created: March 21 2019
  */
 
+#include "stdlib.h"
 #include "MK64F12.h"
 #include "uart.h"
 #include "camera.h"
@@ -103,7 +104,7 @@ int main(void)
             Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
             int da_mid = jr.left + ((jr.right-jr.left)/2);
             int delta = abs(CENTER-da_mid);
-            sprintf(taco,"%d, %f, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
+            sprintf(taco,"%d, %d, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
             put(taco);
         }
 
@@ -314,9 +315,9 @@ void DriveAllNight(Struct edge_index) {
 
     uint16_t middle = ((edge_index.right - edge_index.left)/2) + edge_index.left ;
 
-    char tacos[100];
-    sprintf(tacos,"%d\n\r", middle);
-    put(tacos);
+    // char tacos[100];
+    // sprintf(tacos,"%d\n\r", middle);
+    // put(tacos);
 
     // steer right if on the left side of the track
     if (middle > CENTER + MARGIN) {
@@ -379,7 +380,7 @@ void TurnCar(uint16_t index){
     if ((index < ONE_TWENTY_EIGHT) && (index >= 0)) {
         double dutycycle = (double) SERV_MID;
         double servo_range = (double) SERV_MAX - (double) SERV_MIN;
-        double range_mult = (double) OTE / servo_range;
+        double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
         double norm_duty = (double) SERV_MIN + ((double) index / range_mult); // THIS IS WHAT YOU HAD
         if (index <= 30)
         {
