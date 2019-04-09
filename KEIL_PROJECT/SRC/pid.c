@@ -45,7 +45,7 @@
 //     MotorSpeedOld = 0;
 //     ErrOld1 = 0;
 //     ErrOld2 = 0;
-//     Kp = 0.45;
+//     Kp = 0.30;
 //     Ki = 0.15;
 //     Kd = 0.20;
 //     Vdes = ; // Find normal speeds

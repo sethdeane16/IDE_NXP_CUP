@@ -19,22 +19,22 @@
 #define     SIXTY_FOUR          64
 #define     MARGIN              3
 #define     SERV_MIN            4.8
-#define     SERV_MAX            9.14545
+#define     SERV_MAX            9
 #define     SERV_MID            (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
-#define     CENTER              72
 
 #define     DUTY                40
 
 #define     CAM_DEBUG           0
-#define     SER_DEBUG           1
+#define     SER_DEBUG           0
 
-
+// Structure to hold the greatest and smallest value from the camera array.
+// Left is the smaller index, Right is the larger index.
 struct greaterSmaller {
  int left, right;
 };
 
+// Declarations
 typedef struct greaterSmaller Struct;
-
 Struct LeftRightIndex(int16_t* array, int size);
 void DriveAllNight(Struct left_right);
 
@@ -43,17 +43,26 @@ int main(void)
     // Initialize UART and PWM
     initialize();
 
-    uint16_t* camera_sig;   // previously ptr
-
+    // Array holding the 128 length array containing camera signal
+    uint16_t* camera_sig;
+    
+    // Make sure wheels are straightened initally
+    SetServoDutyCycle(SERV_MID);
+    
+    // Initialize variables for PID control
+    double ServoTurnOld = 64;
+    double ErrOld1 = 0;
+    double ErrOld2 = 0;
+    
     while(1){
         // Read Trace Camera
         camera_sig = Camera_Main();
 
         // print camera signal
-        if (CAM_DEBUG) {
-            put("camera_sig");
-            print_array_u(camera_sig, ONE_TWENTY_EIGHT);
-        }
+//        if (CAM_DEBUG) {
+//            put("camera_sig");
+//            print_array_u(camera_sig, ONE_TWENTY_EIGHT);
+//        }
 
         /*****************************
          Normalize Trace
@@ -63,10 +72,10 @@ int main(void)
         median_filter(camera_sig, median_sig, ONE_TWENTY_EIGHT);
 
         // print median signal
-        if (CAM_DEBUG) {
-            put("median_sig");
-            print_array_u(median_sig, ONE_TWENTY_EIGHT);
-        }
+//        if (CAM_DEBUG) {
+//            put("median_sig");
+//            print_array_u(median_sig, ONE_TWENTY_EIGHT);
+//        }
 
         // step 2) Weighted average filter
         int16_t weight_fil[5] = {1,2,4,2,1};
@@ -77,16 +86,18 @@ int main(void)
         for (int k = 2; k < ONE_TWENTY_EIGHT-2; k++){
             weight_sig[k] = weight_sig[k+2];
         }
+        
+        // Get get rid of 4 zeros that are created by convolve function
         weight_sig[0] = weight_sig[2];
         weight_sig[1] = weight_sig[2];
         weight_sig[126] = weight_sig[125];
         weight_sig[127] = weight_sig[125];
 
         // print clean signal
-        if (CAM_DEBUG) {
-            put("weight_sig");
-            print_array_u(weight_sig, ONE_TWENTY_EIGHT);
-        }
+//        if (CAM_DEBUG) {
+//            put("weight_sig");
+//            print_array_u(weight_sig, ONE_TWENTY_EIGHT);
+//        }
 
         // step 3) Derivative filter
         int16_t deriv_fil[3] = {1,0,-1};
@@ -94,28 +105,69 @@ int main(void)
         der_convolve(weight_sig, deriv_fil, deriv_sig, ONE_TWENTY_EIGHT, sizeof(deriv_fil)/sizeof(deriv_fil[0]),1);
 
         // print derivative signal
-        if (CAM_DEBUG) {
-            put("derivative_sig");
-            print_array_s(deriv_sig, ONE_TWENTY_EIGHT);
-        }
+//        if (CAM_DEBUG) {
+//            put("derivative_sig");
+//            print_array_s(deriv_sig, ONE_TWENTY_EIGHT);
+//        }
 
-        if (SER_DEBUG) {
-            char taco[100];
-            Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
-            int da_mid = jr.left + ((jr.right-jr.left)/2);
-            int delta = abs(CENTER-da_mid);
-            sprintf(taco,"%d, %d, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
-            put(taco);
-        }
+//        if (SER_DEBUG) {
+//            char taco[100];
+//            Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
+//            int da_mid = jr.left + ((jr.right-jr.left)/2);
+//            int delta = abs(SIXTY_FOUR-da_mid);
+//            sprintf(taco,"%d, %d, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
+//            put(taco);
+//        }
 
         /*****************************
          DRIVE BABY DRIVE
         *****************************/
 
+        // Turn on motors
+//        SetMotorDutyCycleL(DUTY, 10000, 1);
+//        SetMotorDutyCycleR(DUTY, 10000, 1);
+        
+        // Calculate center of track
+        Struct edge_index = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
+        int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left ;
+        
+        double Kp = 0.30;
+        double Ki = 0;   // default .15
+        double Kd = 0;   // default .20
 
-        // SetMotorDutyCycleL(DUTY, 10000, 1);
-        // SetMotorDutyCycleR(DUTY, 10000, 1);
-        DriveAllNight(LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT));
+        double Err = (SIXTY_FOUR - (double) calculated_middle);
+        double ServoTurn = ServoTurnOld + \
+                           Kp * (Err-ErrOld1) + \
+                           Ki * (Err+ErrOld1)/2 + \
+                           Kd * (Err - 2*ErrOld1 + ErrOld2);
+        
+//        ServoTurn = clip(ServoTurn,-,+)
+//        char tado[100];
+//        sprintf(tado,"%lf, %lf, %d\n\r",Err,ServoTurn,calculated_middle);
+//        put(tado);
+        double servo_range = (double) SERV_MAX - (double) SERV_MIN;
+        double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
+        double dutycycle = (double) SERV_MIN + (ServoTurn / (double) range_mult);
+        if (dutycycle > SERV_MAX)
+        {
+            SetServoDutyCycle(SERV_MAX);
+        }
+        else if (dutycycle < SERV_MIN)
+        {
+            SetServoDutyCycle(SERV_MIN);
+        }
+        else
+        {
+            SetServoDutyCycle(dutycycle);
+        }
+        ServoTurnOld = ServoTurn;
+        char taco[100];
+        sprintf(taco,"%lf, %lf, %d\n\r",Err,ServoTurn,calculated_middle);
+        put(taco);
+        ErrOld2 = ErrOld1;
+        ErrOld1 = Err;
+     
+//        DriveAllNight(LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT));
 
     }
 
@@ -320,9 +372,9 @@ void DriveAllNight(Struct edge_index) {
     // put(tacos);
 
     // steer right if on the left side of the track
-    if (middle > CENTER + MARGIN) {
+    if (middle > SIXTY_FOUR + MARGIN) {
         TurnCar(edge_index.right);
-//        if (middle > CENTER + 2*MARGIN)
+//        if (middle > SIXTY_FOUR + 2*MARGIN)
 //        {
 //            SetMotorDutyCycleL(DUTY, 10000, 1);
 //            SetMotorDutyCycleR(DUTY/2, 10000, 1);
@@ -336,9 +388,9 @@ void DriveAllNight(Struct edge_index) {
 //        }
     }
     // steer left if on the right side of the track
-    else if(middle < CENTER - MARGIN) {
+    else if(middle < SIXTY_FOUR - MARGIN) {
         TurnCar(edge_index.left);
-//        if (middle > CENTER - 2*MARGIN)
+//        if (middle > SIXTY_FOUR - 2*MARGIN)
 //        {
 //            SetMotorDutyCycleL(DUTY/2, 10000, 1);
 //            SetMotorDutyCycleR(DUTY, 10000, 1);
@@ -376,49 +428,36 @@ void DriveAllNight(Struct edge_index) {
  */
 void TurnCar(uint16_t index){
     // Using middle index gives better for multipliers for both gradual and extreme turns once tested
-    // GENERAL IDEA: Save previous middles??? use to adjust middle. Probably not
-    if ((index < ONE_TWENTY_EIGHT) && (index >= 0)) {
-        double dutycycle = (double) SERV_MID;
+    if ((index < ONE_TWENTY_EIGHT) && (index >= 0))
+    {
         double servo_range = (double) SERV_MAX - (double) SERV_MIN;
         double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
-        double norm_duty = (double) SERV_MIN + ((double) index / range_mult); // THIS IS WHAT YOU HAD
-        if (index <= 30)
-        {
-            dutycycle = SERV_MIN;
-        }
-        // Left side won't turn as hard as right
-        else if ((index > 30) && (index <= 40))
-        {
-            dutycycle = .7 * norm_duty;
-        }
-        else if ((index > 40) && (index <= 50))
-        {
-            dutycycle = .85 * norm_duty;
-        }
-        else if ((index > 50) && (index <= 60))
-        {
-            dutycycle = 1 * norm_duty;
-        }
-        else if ((index >= 70) && (index < 80))
-        {
-            dutycycle = 1 * norm_duty;
-        }
-        else if ((index >= 80) && (index < 90))
-        {
-            dutycycle = 1.15 * norm_duty;
-        }
-        else if ((index >= 90) && (index < 100))
-        {
-            dutycycle = 1.3 * norm_duty;
-        }
-        else if (index >= 100)
-        {
-            dutycycle = SERV_MAX;
-        }
-        else
-        {
-            dutycycle = dutycycle;
-        }
+        double dutycycle = (double) SERV_MIN + ((double) index / (double) 29);
         SetServoDutyCycle(dutycycle);
     }
 }
+
+
+
+
+ void TurnPID(int calculated_middle)
+ {
+     // Main
+     double ServoTurnOld = 0;
+     double ErrOld1 = 0;
+     double ErrOld2 = 0;
+     double Kp = 0.30;
+     double Ki = 0.15;
+     double Kd = 0.20;
+
+     double Err = SIXTY_FOUR - (double) calculated_middle;
+     double ServoTurn = ServoTurnOld + \
+                 Kp * (Err-ErrOld1) + \
+                 Ki * (Err+ErrOld1)/2 + \
+                 Kd * (Err - 2*ErrOld1 + ErrOld2);
+
+     // Main
+     ServoTurnOld = ServoTurn;
+     ErrOld2 = ErrOld1;
+     ErrOld1 = Err;
+ }
