@@ -19,13 +19,13 @@
 #define     MARGIN              3
 #define     SERV_MIN            4.8
 #define     SERV_MAX            9.14545
-#define     SERV_MID            ((SERV_MIN+SERV_MAX)/2)
+#define     SERV_MID            (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
 #define     CENTER              72
 
 #define     DUTY                40
 
 #define     CAM_DEBUG           0
-#define     SER_DEBUG           0
+#define     SER_DEBUG           1
 
 
 struct greaterSmaller {
@@ -101,17 +101,19 @@ int main(void)
         if (SER_DEBUG) {
             char taco[100];
             Struct jr = LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT);
-            sprintf(taco,"%d, %d\n\r",jr.left, jr.right);
+            int da_mid = jr.left + ((jr.right-jr.left)/2);
+            int delta = abs(CENTER-da_mid);
+            sprintf(taco,"%d, %f, %d, %d\n\r",jr.left,da_mid,jr.right, delta);
             put(taco);
         }
-        
+
         /*****************************
          DRIVE BABY DRIVE
         *****************************/
-        
-        
-        SetMotorDutyCycleL(DUTY, 10000, 1);
-        SetMotorDutyCycleR(DUTY, 10000, 1);
+
+
+        // SetMotorDutyCycleL(DUTY, 10000, 1);
+        // SetMotorDutyCycleR(DUTY, 10000, 1);
         DriveAllNight(LeftRightIndex(deriv_sig, ONE_TWENTY_EIGHT));
 
     }
@@ -309,13 +311,13 @@ Struct LeftRightIndex(int16_t* array, int size) {
  *  void
  */
 void DriveAllNight(Struct edge_index) {
-    
+
     uint16_t middle = ((edge_index.right - edge_index.left)/2) + edge_index.left ;
-    
+
     char tacos[100];
     sprintf(tacos,"%d\n\r", middle);
     put(tacos);
-    
+
     // steer right if on the left side of the track
     if (middle > CENTER + MARGIN) {
         TurnCar(edge_index.right);
@@ -359,7 +361,7 @@ void DriveAllNight(Struct edge_index) {
 /* TurnCar
  * Description:
  *  Turn the car with a standard value range.
- *  Takes an index and ouptuts the duty cycle to 
+ *  Takes an index and ouptuts the duty cycle to
  *  turn the servo the appropriate amount.
  *
  * Parameters:
@@ -372,15 +374,49 @@ void DriveAllNight(Struct edge_index) {
  *  void
  */
 void TurnCar(uint16_t index){
+    // Using middle index gives better for multipliers for both gradual and extreme turns once tested
+    // GENERAL IDEA: Save previous middles??? use to adjust middle. Probably not
     if ((index < ONE_TWENTY_EIGHT) && (index >= 0)) {
-        double dutycycle = SERV_MIN + ((double) index / (double) 29);
-        if (index < 50)
+        double dutycycle = (double) SERV_MID;
+        double servo_range = (double) SERV_MAX - (double) SERV_MIN;
+        double range_mult = (double) OTE / servo_range;
+        double norm_duty = (double) SERV_MIN + ((double) index / range_mult); // THIS IS WHAT YOU HAD
+        if (index <= 30)
         {
             dutycycle = SERV_MIN;
         }
-        else if (index > 100)
+        // Left side won't turn as hard as right
+        else if ((index > 30) && (index <= 40))
+        {
+            dutycycle = .7 * norm_duty;
+        }
+        else if ((index > 40) && (index <= 50))
+        {
+            dutycycle = .85 * norm_duty;
+        }
+        else if ((index > 50) && (index <= 60))
+        {
+            dutycycle = 1 * norm_duty;
+        }
+        else if ((index >= 70) && (index < 80))
+        {
+            dutycycle = 1 * norm_duty;
+        }
+        else if ((index >= 80) && (index < 90))
+        {
+            dutycycle = 1.15 * norm_duty;
+        }
+        else if ((index >= 90) && (index < 100))
+        {
+            dutycycle = 1.3 * norm_duty;
+        }
+        else if (index >= 100)
         {
             dutycycle = SERV_MAX;
+        }
+        else
+        {
+            dutycycle = dutycycle;
         }
         SetServoDutyCycle(dutycycle);
     }
