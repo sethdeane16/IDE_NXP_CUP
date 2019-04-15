@@ -22,7 +22,10 @@
 #define     SERV_MIN            4.5
 #define     SERV_MAX            9
 #define     SERV_MID            (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
-#define     MOTOR_DUTY          45
+#define     MOTOR_DUTY          50
+#define     MARGIN              4
+#define     MAX_DUTY            60
+#define     MIN_DUTY            40
 
 // PID Values
 // combo that work
@@ -51,14 +54,18 @@ int main(void)
 
     // Array holding the 128 length array containing camera signal
     uint16_t* camera_sig;
-    
+
+    // Initialize the starting duty cycle
+    double dutycycle = MOTOR_DUTY;
+    double old_dutycycle = MOTOR_DUTY;
+
     // Initialize variables for PID control
     double servo_turn_old = 64.0;
     double err_old1 = 0.0;
     double err_old2 = 0.0;
-    
+
     while(1){
-        
+
         // Read Trace Camera
         camera_sig = Camera_Main();
 
@@ -66,26 +73,68 @@ int main(void)
         int16_t deriv_sig[ONE_TWENTY_EIGHT];
         Filter(camera_sig, deriv_sig);
 
-        // Turn on motors
-        SetMotorDutyCycleL(MOTOR_DUTY, 10000, 1);
-        SetMotorDutyCycleR(MOTOR_DUTY, 10000, 1);
-        
         // Calculate center of track
         Struct edge_index = left_right_index(deriv_sig, ONE_TWENTY_EIGHT);
-        int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left ;
-        
+        int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
+        int middle_delta = abs(SIXTY_FOUR - calculated_middle);
+
+        // Print the middle delta as to determine what is usual and what to make the MARGIN
+        char mid_delta[10000];
+        sprintf("%d \n\r", middle_delta);
+        put(mid_delta);
+
+        // Might rubber band if on turn it rectifies itself enough
+        // could be made into a function
+        // Turning slow down
+        if (middle_delta > MARGIN)
+        {
+            if (old_dutycycle > MOTOR_DUTY)
+            {
+                dutycycle = (double) MOTOR_DUTY;
+            }
+            else if (old_dutycycle == MIN_DUTY)
+            {
+                dutycycle = old_dutycycle;
+            }
+            else
+            {
+                dutycycle = old_dutycycle - 5.0;
+            }
+        }
+        // Straight Speed up
+        else
+        {
+            if (old_dutycycle < MOTOR_DUTY)
+            {
+                dutycycle = (double) MOTOR_DUTY;
+            }
+            else if (old_dutycycle == MAX_DUTY)
+            {
+                dutycycle = old_dutycycle;
+            }
+            else
+            {
+                dutycycle = old_dutycycle + 2.0;
+            }
+        }
+        old_dutycycle = dutycycle;
+
+        // Turn on motors
+        SetMotorDutyCycleL(dutycycle, 10000, 1);
+        SetMotorDutyCycleR(dutycycle, 10000, 1);
+
         // Perform PID calculations
         double err = (double) SIXTY_FOUR - (double) calculated_middle;
         double servo_turn = ServoTurnOld - \
                            (double) KP * (err-err_old1) - \
                            (double) KI * (err+err_old1)/2 - \
                            (double) KD * (err - 2*err_old1 + err_old2);
-        
-        // convert to a 
+
+        // convert to a
         double servo_range = (double) SERV_MAX - (double) SERV_MIN;
         double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
         double dutycycle = (double) SERV_MIN + (servo_turn / (double) range_mult);
-        
+
         if (dutycycle > SERV_MAX)
         {
             SetServoDutyCycle(SERV_MAX);
@@ -107,7 +156,7 @@ int main(void)
 }
 
 
-/* 
+/*
  * Function: initialize
  * --------------------
  *  Function that contains all the initialization function.
@@ -164,7 +213,7 @@ Struct left_right_index(int16_t* array, int size) {
     return s;
 }
 
-/* 
+/*
  * Function: filter_main
  * ---------------------
  *  Take an input signal from the linescan camera and output a 3x filtered
@@ -204,7 +253,7 @@ Struct left_right_index(int16_t* array, int size) {
     for (int k = 2; k < ONE_TWENTY_EIGHT-2; k++){
         weight_sig[k] = weight_sig[k+2];
     }
-    
+
     // Get get rid of 4 zeros that are created by convolve function
     weight_sig[0] = weight_sig[2];
     weight_sig[1] = weight_sig[2];
