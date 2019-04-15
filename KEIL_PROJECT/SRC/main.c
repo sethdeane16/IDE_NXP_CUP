@@ -22,18 +22,18 @@
 #define     SERV_MIN            4.5
 #define     SERV_MAX            9
 #define     SERV_MID            (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
-#define     MOTOR_DUTY          50
-#define     MARGIN              4
-#define     MAX_DUTY            60
-#define     MIN_DUTY            40
+#define     MOTOR_DUTY          45
+#define     MARGIN              2
+#define     MAX_DUTY            55
+#define     MIN_DUTY            35
 
 // PID Values
 // combo that work
 //  - kp=6, ki=0, kd=2 at 40% duty cycle
 //  - kp=5, ki=0, kd=2 at 50% duty cycle
-#define     KP                  5.0
+#define     KP                  5.5
 #define     KI                  0.0
-#define     KD                  2.0
+#define     KD                  1.5
 
 // Debugging variables (1 = Debug True)
 #define     CAM_DEBUG           0
@@ -46,6 +46,7 @@ struct greaterSmaller {
 };
 
 typedef struct greaterSmaller Struct;
+Struct left_right_index(int16_t* array, int size);
 
 int main(void)
 {
@@ -71,7 +72,7 @@ int main(void)
 
         // Filter linescan camera signal
         int16_t deriv_sig[ONE_TWENTY_EIGHT];
-        Filter(camera_sig, deriv_sig);
+        filter_main(camera_sig, deriv_sig);
 
         // Calculate center of track
         Struct edge_index = left_right_index(deriv_sig, ONE_TWENTY_EIGHT);
@@ -79,9 +80,9 @@ int main(void)
         int middle_delta = abs(SIXTY_FOUR - calculated_middle);
 
         // Print the middle delta as to determine what is usual and what to make the MARGIN
-        char mid_delta[10000];
-        sprintf("%d \n\r", middle_delta);
-        put(mid_delta);
+//        char mid_delta[10000];
+//        sprintf("%d \n\r", middle_delta);
+//        put(mid_delta);
 
         // Might rubber band if on turn it rectifies itself enough
         // could be made into a function
@@ -92,9 +93,9 @@ int main(void)
             {
                 dutycycle = (double) MOTOR_DUTY;
             }
-            else if (old_dutycycle == MIN_DUTY)
+            else if (old_dutycycle <= MIN_DUTY)
             {
-                dutycycle = old_dutycycle;
+                dutycycle = MIN_DUTY;
             }
             else
             {
@@ -108,13 +109,13 @@ int main(void)
             {
                 dutycycle = (double) MOTOR_DUTY;
             }
-            else if (old_dutycycle == MAX_DUTY)
+            else if (old_dutycycle >= MAX_DUTY)
             {
-                dutycycle = old_dutycycle;
+                dutycycle = MAX_DUTY;
             }
             else
             {
-                dutycycle = old_dutycycle + 2.0;
+                dutycycle = old_dutycycle + 3.0;
             }
         }
         old_dutycycle = dutycycle;
@@ -125,7 +126,7 @@ int main(void)
 
         // Perform PID calculations
         double err = (double) SIXTY_FOUR - (double) calculated_middle;
-        double servo_turn = ServoTurnOld - \
+        double servo_turn = servo_turn_old - \
                            (double) KP * (err-err_old1) - \
                            (double) KI * (err+err_old1)/2 - \
                            (double) KD * (err - 2*err_old1 + err_old2);

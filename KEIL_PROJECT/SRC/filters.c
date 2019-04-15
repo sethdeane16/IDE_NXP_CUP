@@ -1,3 +1,6 @@
+
+#include "MK64F12.h"
+
 /* 
  * Function: median_filter
  * -----------------------

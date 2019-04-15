@@ -6,6 +6,7 @@
 ".\objects\pwm.o"
 ".\objects\uart.o"
 ".\objects\pid.o"
+".\objects\filters.o"
 ".\objects\startup_mk64f12.o"
 ".\objects\system_mk64f12.o"
 --strict --scatter ".\Objects\NXP_CAR_PROJECT.sct"
