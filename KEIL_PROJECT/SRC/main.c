@@ -15,17 +15,23 @@
 #include "main.h"
 #include "uart.h"
 #include "pwm.h"
+#include "math.h"
 
 // Common Static Values
 #define     ONE_TWENTY_EIGHT    128
 #define     SIXTY_FOUR          64
-#define     SERV_MIN            4.5
-#define     SERV_MAX            9
-#define     SERV_MID            (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
-#define     MOTOR_DUTY          45
 #define     MARGIN              2
-#define     MAX_DUTY            55
-#define     MIN_DUTY            35
+
+// Servo ranges
+#define     SERVO_MIN           4.5
+#define     SERVO_MAX           9
+#define     SERVO_MID           (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
+
+// Motor Ranges
+#define     MOTOR_TURN_MAX      75
+#define     MOTOR_STRAIGHT_MAX  70
+#define     MOTOR_MID           60
+#define     MOTOR_MIN           25
 
 // PID Values
 // combo that work
@@ -34,6 +40,9 @@
 #define     KP                  5.5
 #define     KI                  0.0
 #define     KD                  1.5
+
+#define     MKP                 2
+#define     MKD                 .5
 
 // Debugging variables (1 = Debug True)
 #define     CAM_DEBUG           0
@@ -46,7 +55,7 @@ struct greaterSmaller {
 };
 
 typedef struct greaterSmaller Struct;
-Struct left_right_index(int16_t* array, int size);
+Struct left_right_index(int16_t* array, int old_calculated_middle);
 
 int main(void)
 {
@@ -56,15 +65,22 @@ int main(void)
     // Array holding the 128 length array containing camera signal
     uint16_t* camera_sig;
 
-    // Initialize the starting duty cycle
-    double dutycycle = MOTOR_DUTY;
-    double old_dutycycle = MOTOR_DUTY;
-
     // Initialize variables for PID control
     double servo_turn_old = 64.0;
-    double err_old1 = 0.0;
-    double err_old2 = 0.0;
+    double servo_err_old1 = 0.0;
+    double servo_err_old2 = 0.0;
+    
+    // Initialize the starting duty cycle
+    double dutycycle = MOTOR_MID;
+    double old_dutycycle = MOTOR_MID;
+    
+    // Initialize the starting duty cycle
+    int motor_duty_left = MOTOR_MID;
+    int motor_duty_right = MOTOR_MID;
+    int old_motor_duty_left = MOTOR_MID;
+    int old_motor_duty_right = MOTOR_MID;
 
+    int old_calculated_middle = SIXTY_FOUR;
     while(1){
 
         // Read Trace Camera
@@ -75,82 +91,105 @@ int main(void)
         filter_main(camera_sig, deriv_sig);
 
         // Calculate center of track
-        Struct edge_index = left_right_index(deriv_sig, ONE_TWENTY_EIGHT);
+        Struct edge_index = left_right_index(deriv_sig, old_calculated_middle);
         int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
         int middle_delta = abs(SIXTY_FOUR - calculated_middle);
 
-        // Print the middle delta as to determine what is usual and what to make the MARGIN
-//        char mid_delta[10000];
-//        sprintf("%d \n\r", middle_delta);
-//        put(mid_delta);
+        // Perform PID calculations
+        double servo_err = (double) SIXTY_FOUR - (double) calculated_middle;
+        double servo_turn = servo_turn_old - \
+                           (double) KP * (servo_err-servo_err_old1) - \
+                           (double) KI * (servo_err+servo_err_old1)/2 - \
+                           (double) KD * (servo_err - 2*servo_err_old1 + servo_err_old2);
 
-        // Might rubber band if on turn it rectifies itself enough
-        // could be made into a function
-        // Turning slow down
-        if (middle_delta > MARGIN)
+        // convert to a number usable by the servos
+        double servo_range = (double) SERVO_MAX - (double) SERVO_MIN;
+        double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
+        double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);                          
+                           
+        // ALL THE WAY RIGHT
+        if (servo_duty > SERVO_MAX)
         {
-            if (old_dutycycle > MOTOR_DUTY)
-            {
-                dutycycle = (double) MOTOR_DUTY;
-            }
-            else if (old_dutycycle <= MIN_DUTY)
-            {
-                dutycycle = MIN_DUTY;
-            }
-            else
-            {
-                dutycycle = old_dutycycle - 5.0;
-            }
+            motor_duty_left = MOTOR_TURN_MAX;
+            motor_duty_right = MOTOR_MIN;
+            SetServoDutyCycle(SERVO_MAX);
+            dutycycle = MOTOR_MID;
         }
-        // Straight Speed up
+        // ALL THE WAY LEFT
+        else if (servo_duty < SERVO_MIN)
+        {
+            motor_duty_left = MOTOR_MIN;
+            motor_duty_right = MOTOR_TURN_MAX;
+            SetServoDutyCycle(SERVO_MIN);
+            dutycycle = MOTOR_MID;
+        }
+        // Straightening out
         else
         {
-            if (old_dutycycle < MOTOR_DUTY)
+            if (old_dutycycle >= MOTOR_STRAIGHT_MAX)
             {
-                dutycycle = (double) MOTOR_DUTY;
-            }
-            else if (old_dutycycle >= MAX_DUTY)
-            {
-                dutycycle = MAX_DUTY;
+                dutycycle = MOTOR_STRAIGHT_MAX;
             }
             else
             {
                 dutycycle = old_dutycycle + 3.0;
             }
+            motor_duty_left = dutycycle;
+            motor_duty_right = dutycycle;
+            SetServoDutyCycle(servo_duty);
         }
-        old_dutycycle = dutycycle;
-
+        
+          
+//        // Might rubber band if on turn it rectifies itself enough
+//        // could be made into a function
+//        // Turning slow down
+//        if (middle_delta > MARGIN)
+//        {
+//            if (old_dutycycle > MOTOR_MID)
+//            {
+//                dutycycle = (double) MOTOR_MID;
+//            }
+//            else if (old_dutycycle <= MOTOR_MIN)
+//            {
+//                dutycycle = MOTOR_MIN;
+//            }
+//            else
+//            {
+//                dutycycle = old_dutycycle - 5.0;
+//            }
+//        }
+//        // Straight Speed up
+//        else
+//        {
+//            if (old_dutycycle < MOTOR_MID)
+//            {
+//                dutycycle = (double) MOTOR_MID;
+//            }
+//            else if (old_dutycycle >= MOTOR_MAX)
+//            {
+//                dutycycle = MOTOR_MAX;
+//            }
+//            else
+//            {
+//                dutycycle = old_dutycycle + 3.0;
+//            }
+//        }
+//        old_dutycycle = dutycycle;
+        
         // Turn on motors
-        SetMotorDutyCycleL(dutycycle, 10000, 1);
-        SetMotorDutyCycleR(dutycycle, 10000, 1);
-
-        // Perform PID calculations
-        double err = (double) SIXTY_FOUR - (double) calculated_middle;
-        double servo_turn = servo_turn_old - \
-                           (double) KP * (err-err_old1) - \
-                           (double) KI * (err+err_old1)/2 - \
-                           (double) KD * (err - 2*err_old1 + err_old2);
-
-        // convert to a
-        double servo_range = (double) SERV_MAX - (double) SERV_MIN;
-        double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
-        double dutycycle = (double) SERV_MIN + (servo_turn / (double) range_mult);
-
-        if (dutycycle > SERV_MAX)
-        {
-            SetServoDutyCycle(SERV_MAX);
-        }
-        else if (dutycycle < SERV_MIN)
-        {
-            SetServoDutyCycle(SERV_MIN);
-        }
-        else
-        {
-            SetServoDutyCycle(dutycycle);
-        }
+//        SetMotorDutyCycleL(dutycycle, 10000, 1);
+//        SetMotorDutyCycleR(dutycycle, 10000, 1);
+ 
+        SetMotorDutyCycleL(motor_duty_left, 10000, 1);
+        SetMotorDutyCycleR(motor_duty_right, 10000, 1);        
+        
         servo_turn_old = servo_turn;
-        err_old2 = err_old1;
-        err_old1 = err;
+        servo_err_old2 = servo_err_old1;
+        servo_err_old1 = servo_err;
+        
+        old_calculated_middle = calculated_middle;
+        
+        old_dutycycle = dutycycle;
     }
 
 	return 0;
@@ -182,29 +221,61 @@ void initialize(void) {
  *  Find the left and right index of an array.
  *
  *  array: input array
- *  size: size of array
  *
  *  Returns: Struct containing min and max index of track
  */
-Struct left_right_index(int16_t* array, int size) {
+Struct left_right_index(int16_t* array, int old_calculated_middle) {
     Struct s;
 
-    int16_t minimum = array[0];
-    int min_idx = 0;
-    int16_t maximum = array[0];
-    int max_idx = 0;
+    int16_t minimum = array[SIXTY_FOUR];
+    int min_idx = SIXTY_FOUR;
+    int16_t maximum = array[SIXTY_FOUR];
+    int max_idx = SIXTY_FOUR;
 
-    for (int c = 1; c < size; c++)
+    
+    // calculate the mean
+    int total = 0;
+    for (int i = 0; i < ONE_TWENTY_EIGHT; i++)
     {
-        if (array[c] < minimum)
+        total += array[i];
+    }
+    
+//    print_array_s(array, ONE_TWENTY_EIGHT);
+    
+    int mean = total / ONE_TWENTY_EIGHT;
+    
+    // calculate difference squared from mean
+    int difference = 0;
+    for (int i = 0; i < ONE_TWENTY_EIGHT; i++)
+    {
+        difference += pow((array[i] - mean), 2);
+    }
+    
+    // calculate standard deviation
+    int stdev = sqrt(difference/(ONE_TWENTY_EIGHT - 1));
+    
+    // Print the middle delta as to determine what is usual and what to make the MARGIN
+//    char mid_delta[10000];
+//    sprintf(mid_delta, "%d %d \n\r", mean, stdev);
+//    put(mid_delta);    
+    
+    int breakmin = 0;
+    for (int c = old_calculated_middle; c < ONE_TWENTY_EIGHT; c++)
+    {
+        if ((array[c] < (mean - stdev)) && (breakmin == 0))
         {
-            minimum = array[c];
             min_idx = c;
+            breakmin = 1;
         }
-        if (array[c] > maximum)
+    }
+    
+    int breakmax = 0;
+    for (int c = old_calculated_middle; c > 0; c--)
+    {
+        if ((array[c] > (mean + stdev)) && (breakmax == 0))
         {
-            maximum = array[c];
             max_idx = c;
+            breakmax = 1;
         }
     }
 

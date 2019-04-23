@@ -13,3 +13,4 @@
 .\objects\main.o: SRC\main.h
 .\objects\main.o: SRC\uart.h
 .\objects\main.o: SRC\pwm.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h

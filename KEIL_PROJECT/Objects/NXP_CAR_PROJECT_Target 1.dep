@@ -36,7 +36,7 @@ I (C:\Keil_v5\ARM\PACK\Keil\Kinetis_K60_DFP\1.5.0\Device\Include\system_MK64F12.
 I (SRC\uart.h)(0x5CB4C5FF)
 I (SRC\isr.h)(0x5CB4C5FF)
 F (.\SRC\isr.h)(0x5CB4C5FF)()
-F (.\SRC\main.c)(0x5CB4D5A8)(--c99 -c --cpu Cortex-M4.fp -D__EVAL -g -O0 --apcs=interwork --split_sections-I.\RTE\_Target_1-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.1.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\Kinetis_K60_DFP\1.5.0\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DMK64FN1M0xxx12-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (.\SRC\main.c)(0x5CBF9E7D)(--c99 -c --cpu Cortex-M4.fp -D__EVAL -g -O0 --apcs=interwork --split_sections-I.\RTE\_Target_1-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.1.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\Kinetis_K60_DFP\1.5.0\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DMK64FN1M0xxx12-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (SRC\MK64F12.h)(0x5CB4C5FF)
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x588C2C04)
 I (C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.1.1\CMSIS\Include\core_cm4.h)(0x59C17EEE)
@@ -51,6 +51,7 @@ I (C:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x588C2C04)
 I (SRC\main.h)(0x5CB4C6A8)
 I (SRC\uart.h)(0x5CB4C5FF)
 I (SRC\pwm.h)(0x5CB4C5FF)
+I (C:\Keil_v5\ARM\ARMCC\include\math.h)(0x588C2C04)
 F (.\SRC\main.h)(0x5CB4C6A8)()
 F (.\SRC\MK64F12.h)(0x5CB4C5FF)()
 F (.\SRC\pwm.c)(0x5CB4C5FF)(--c99 -c --cpu Cortex-M4.fp -D__EVAL -g -O0 --apcs=interwork --split_sections-I.\RTE\_Target_1-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.1.1\CMSIS\Include-IC:\Keil_v5\ARM\PACK\Keil\Kinetis_K60_DFP\1.5.0\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DMK64FN1M0xxx12-o .\objects\pwm.o --omf_browse .\objects\pwm.crf --depend .\objects\pwm.d)
