@@ -57,10 +57,10 @@ uint16_t ADC0VAL;
 /* Camera_Main
 * Description:
 * 	Retrives a scan from the camera
-* 
+*
 * Parameters:
 *   void
-* 
+*
 * Returns:
 *   uint16_t* - 128 int array of camera values
 */
@@ -298,7 +298,7 @@ void init_PIT(void) {
 
     // Enable PIT interrupt in the interrupt controller
     NVIC_EnableIRQ(PIT0_IRQn);
-    
+
     return;
 
 } // init_PIT
@@ -320,24 +320,34 @@ void init_PIT(void) {
 void init_GPIO(void) {
 
     //initialize clocks for each different port used.
-    SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK; // Enables Clock on PORTB (LED)
+    SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK; // Enables Clock on PORTB. (LED)
+    SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK; // Enables Clock on PORTE. (LED)
+    SIM_SCGC5 |= SIM_SCGC5_PORTC_MASK; // Enables Clock on PORTC. (Button)
 
     //Configure Port Control Register for Inputs with pull enable and pull up resistor
 
     // Configure mux for Outputs
     PORTB_PCR9 = PORT_PCR_MUX(1);  	// camera  	(clk)
-    PORTB_PCR22 = PORT_PCR_MUX(1);  // red   	(LED)
+    PORTB_PCR21 = PORT_PCR_MUX(1);  // Blue     (LED)
+	PORTB_PCR22 = PORT_PCR_MUX(1);  // Red      (LED)
     PORTB_PCR23 = PORT_PCR_MUX(1);  // camera 	(SI)
+    PORTC_PCR6 = PORT_PCR_MUX(1);   // button   (SW2)
+    PORTE_PCR26 = PORT_PCR_MUX(1);  // Green    (LED)
 
     // Switch the GPIO pins to output mode
-    GPIOB_PDDR |= (1 << 9);  	// camera  	(clk)
-    GPIOB_PDDR |= (1 << 22);  	// red   	(LED)
-    GPIOB_PDDR |= (1 << 23);  	// camera 	(SI)
+    // GPIOB_PDDR |= (1 << 9);  	// camera  	(clk)
+    // GPIOB_PDDR |= (1 << 21);    // Blue     (LED)
+    // GPIOB_PDDR |= (1 << 22);  	// Red      (LED)
+    // GPIOE_PDDR |= (1 << 26);    // Green    (LED)
+    // GPIOB_PDDR |= (1 << 23);  	// camera 	(SI)
 
-    GPIOB_PDDR = (1 << 23) | (1 << 22) | (1 << 9);  // camera (SI)
+    GPIOB_PDDR = (1 << 23) | (1 << 21) | (1 << 22) | (1 << 9);
+    GPIOC_PDDR = (0 << 6);
+    GPIOE_PDDR = (1 << 26);
 
-    // Turn off the outputs
-    GPIOB_PSOR = (1UL << 22);  // red off   (LED)
+    // Turn off the LEDs
+    GPIOB_PSOR = (1UL << 21) | (1UL << 22);
+	GPIOE_PSOR = (1UL << 26);
 
     return;
 
@@ -345,8 +355,8 @@ void init_GPIO(void) {
 
 /* init_ADC0
 * Description:
-* 	Set up ADC for digitizing camera data 
-* 
+* 	Set up ADC for digitizing camera data
+*
 * Parameters:
 * 	void
 *
@@ -388,5 +398,5 @@ void init_ADC0(void) {
 
     // Enable NVIC interrupt
 	NVIC_EnableIRQ(ADC0_IRQn);
-    
+
 } // init_ADC0

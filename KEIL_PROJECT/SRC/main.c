@@ -69,18 +69,54 @@ int main(void)
     double servo_turn_old = 64.0;
     double servo_err_old1 = 0.0;
     double servo_err_old2 = 0.0;
-    
+
     // Initialize the starting duty cycle
-    double dutycycle = MOTOR_MID;
-    double old_dutycycle = MOTOR_MID;
-    
+    double dutycycle = motor_mid;
+    double old_dutycycle = motor_mid;
+
     // Initialize the starting duty cycle
-    int motor_duty_left = MOTOR_MID;
-    int motor_duty_right = MOTOR_MID;
-    int old_motor_duty_left = MOTOR_MID;
-    int old_motor_duty_right = MOTOR_MID;
+    int motor_duty_left = motor_mid;
+    int motor_duty_right = motor_mid;
+    int old_motor_duty_left = motor_mid;
+    int old_motor_duty_right = motor_mid;
 
     int old_calculated_middle = SIXTY_FOUR;
+
+    for(;;){
+        if(((GPIOC_PDIR & (1 << 6)) == 0)){
+            // Green
+            GPIOE_PCOR = 1UL << 26;
+            for(int i = 0; i < 2000000; i=i+1){
+            }
+            GPIOE_PSOR = 1UL << 26;
+        }
+    }
+
+    // for (int button_count = 0; button_count <= 0; button_count++){
+        // if (button_count = 0){
+    motor_turn_max = MOTOR_TURN_MAX;
+    motor_straight_max = MOTOR_STRAIGHT_MAX;
+    motor_mid = MOTOR_MID;
+    motor_min = MOTOR_MIN;
+        // }
+        // else if(button_count = 1){
+        //     // Blue
+        //     GPIOB_PCOR = (1UL << 21);
+        //     for(int i = 0; i < 2000000; i=i+1){
+        //     }
+        //     GPIOB_PSOR = (1UL << 21);
+        //     motor_turn_max = MOTOR_TURN_MAX - 5;
+        //     motor_straight_max = MOTOR_STRAIGHT_MAX - 5;
+        //     motor_mid = MOTOR_MID - 5;
+        //     motor_min = MOTOR_MIN - 5;
+        // }
+        // else{
+        //     motor_turn_max = MOTOR_TURN_MAX - 10;
+        //     motor_straight_max = MOTOR_STRAIGHT_MAX - 10;
+        //     motor_mid = MOTOR_MID - 10;
+        //     motor_min = MOTOR_MIN - 10;
+        // }
+
     while(1){
 
         // Read Trace Camera
@@ -105,30 +141,30 @@ int main(void)
         // convert to a number usable by the servos
         double servo_range = (double) SERVO_MAX - (double) SERVO_MIN;
         double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
-        double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);                          
-                           
+        double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);
+
         // ALL THE WAY RIGHT
         if (servo_duty > SERVO_MAX)
         {
-            motor_duty_left = MOTOR_TURN_MAX;
-            motor_duty_right = MOTOR_MIN;
+            motor_duty_left = motor_turn_max;
+            motor_duty_right = motor_min;
             SetServoDutyCycle(SERVO_MAX);
-            dutycycle = MOTOR_MID;
+            dutycycle = motor_mid;
         }
         // ALL THE WAY LEFT
         else if (servo_duty < SERVO_MIN)
         {
-            motor_duty_left = MOTOR_MIN;
-            motor_duty_right = MOTOR_TURN_MAX;
+            motor_duty_left = motor_min;
+            motor_duty_right = motor_turn_max;
             SetServoDutyCycle(SERVO_MIN);
-            dutycycle = MOTOR_MID;
+            dutycycle = motor_mid;
         }
         // Straightening out
         else
         {
-            if (old_dutycycle >= MOTOR_STRAIGHT_MAX)
+            if (old_dutycycle >= motor_straight_max)
             {
-                dutycycle = MOTOR_STRAIGHT_MAX;
+                dutycycle = motor_straight_max;
             }
             else
             {
@@ -138,20 +174,20 @@ int main(void)
             motor_duty_right = dutycycle;
             SetServoDutyCycle(servo_duty);
         }
-        
-          
+
+
 //        // Might rubber band if on turn it rectifies itself enough
 //        // could be made into a function
 //        // Turning slow down
 //        if (middle_delta > MARGIN)
 //        {
-//            if (old_dutycycle > MOTOR_MID)
+//            if (old_dutycycle > motor_mid)
 //            {
-//                dutycycle = (double) MOTOR_MID;
+//                dutycycle = (double) motor_mid;
 //            }
-//            else if (old_dutycycle <= MOTOR_MIN)
+//            else if (old_dutycycle <= motor_min)
 //            {
-//                dutycycle = MOTOR_MIN;
+//                dutycycle = motor_min;
 //            }
 //            else
 //            {
@@ -161,9 +197,9 @@ int main(void)
 //        // Straight Speed up
 //        else
 //        {
-//            if (old_dutycycle < MOTOR_MID)
+//            if (old_dutycycle < motor_mid)
 //            {
-//                dutycycle = (double) MOTOR_MID;
+//                dutycycle = (double) motor_mid;
 //            }
 //            else if (old_dutycycle >= MOTOR_MAX)
 //            {
@@ -175,22 +211,27 @@ int main(void)
 //            }
 //        }
 //        old_dutycycle = dutycycle;
-        
+
         // Turn on motors
 //        SetMotorDutyCycleL(dutycycle, 10000, 1);
 //        SetMotorDutyCycleR(dutycycle, 10000, 1);
- 
+
         SetMotorDutyCycleL(motor_duty_left, 10000, 1);
-        SetMotorDutyCycleR(motor_duty_right, 10000, 1);        
-        
+        SetMotorDutyCycleR(motor_duty_right, 10000, 1);
+
         servo_turn_old = servo_turn;
         servo_err_old2 = servo_err_old1;
         servo_err_old1 = servo_err;
-        
+
         old_calculated_middle = calculated_middle;
-        
+
         old_dutycycle = dutycycle;
+
+        // if(((GPIOC_PDIR & (1 << 6)) == 0)){
+        //     break;
+        // }
     }
+    // }
 
 	return 0;
 }
@@ -232,33 +273,33 @@ Struct left_right_index(int16_t* array, int old_calculated_middle) {
     int16_t maximum = array[SIXTY_FOUR];
     int max_idx = SIXTY_FOUR;
 
-    
+
     // calculate the mean
     int total = 0;
     for (int i = 0; i < ONE_TWENTY_EIGHT; i++)
     {
         total += array[i];
     }
-    
+
 //    print_array_s(array, ONE_TWENTY_EIGHT);
-    
+
     int mean = total / ONE_TWENTY_EIGHT;
-    
+
     // calculate difference squared from mean
     int difference = 0;
     for (int i = 0; i < ONE_TWENTY_EIGHT; i++)
     {
         difference += pow((array[i] - mean), 2);
     }
-    
+
     // calculate standard deviation
     int stdev = sqrt(difference/(ONE_TWENTY_EIGHT - 1));
-    
+
     // Print the middle delta as to determine what is usual and what to make the MARGIN
 //    char mid_delta[10000];
 //    sprintf(mid_delta, "%d %d \n\r", mean, stdev);
-//    put(mid_delta);    
-    
+//    put(mid_delta);
+
     int breakmin = 0;
     for (int c = old_calculated_middle; c < ONE_TWENTY_EIGHT; c++)
     {
@@ -268,7 +309,7 @@ Struct left_right_index(int16_t* array, int old_calculated_middle) {
             breakmin = 1;
         }
     }
-    
+
     int breakmax = 0;
     for (int c = old_calculated_middle; c > 0; c--)
     {
