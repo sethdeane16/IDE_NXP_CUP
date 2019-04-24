@@ -28,10 +28,10 @@
 #define     SERVO_MID           (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
 
 // Motor Ranges
-#define     MOTOR_TURN_MAX      75
-#define     MOTOR_STRAIGHT_MAX  70
-#define     MOTOR_MID           60
-#define     MOTOR_MIN           25
+#define     MOTOR_TURN_MAX      65
+#define     MOTOR_MAX           85
+#define     MOTOR_MID           50
+#define     MOTOR_MIN           60
 
 // PID Values
 // combo that work
@@ -71,52 +71,84 @@ int main(void)
     double servo_err_old2 = 0.0;
 
     // Initialize the starting duty cycle
-    double dutycycle = motor_mid;
-    double old_dutycycle = motor_mid;
+    int motor_duty_left = MOTOR_MID;
+    int motor_duty_right = MOTOR_MID;
 
-    // Initialize the starting duty cycle
-    int motor_duty_left = motor_mid;
-    int motor_duty_right = motor_mid;
-    int old_motor_duty_left = motor_mid;
-    int old_motor_duty_right = motor_mid;
-
+    // motor speeds that can be changed based off the button
+    int motor_max = MOTOR_MID;
+    int motor_mid = MOTOR_MID;
+    int motor_min = MOTOR_MID;
+    
     int old_calculated_middle = SIXTY_FOUR;
 
-    for(;;){
-        if(((GPIOC_PDIR & (1 << 6)) == 0)){
-            // Green
-            GPIOE_PCOR = 1UL << 26;
-            for(int i = 0; i < 2000000; i=i+1){
-            }
-            GPIOE_PSOR = 1UL << 26;
+    // Speed/light control
+    int button_count = 0;
+    
+    // all LED colors off
+    GPIOE_PSOR = (1UL << 26);
+    GPIOB_PSOR = (1UL << 21);
+    GPIOB_PSOR = (1UL << 22);
+    
+    // White
+    GPIOE_PCOR = (1UL << 26);
+    GPIOB_PCOR = (1UL << 21);
+    GPIOB_PCOR = (1UL << 22);
+
+    while (1) {
+        // Once we select the mode, we break out of this loop ((GPIOC_PDIR & (1 << 6)) == 0)
+        if(((GPIOA_PDIR & (1 << 4)) == 0))
+        {
+            GPIOE_PSOR = (1UL << 26);
+            GPIOB_PSOR = (1UL << 21);
+            GPIOB_PSOR = (1UL << 22);
+            break;
         }
+//        
+//        else if(((GPIOA_PDIR & (1 << 4)) == 0) && (button_count == 0))
+//        {
+//            GPIOB_PSOR = (1UL << 21);
+//            GPIOB_PSOR = (1UL << 22);
+//            
+//            // GREEN
+//            GPIOE_PCOR = (1UL << 26);
+//            
+//            motor_max = MOTOR_MAX;
+//            motor_mid = MOTOR_MID;
+//            motor_min = MOTOR_MIN;
+//            
+//            button_count += 1;
+//        }
+//        else if (((GPIOA_PDIR & (1 << 4)) == 0) && (button_count == 1))
+//        {
+//            GPIOE_PSOR = (1UL << 26);
+//            GPIOB_PSOR = (1UL << 22);
+//            
+//            // Blue
+//            GPIOB_PCOR = (1UL << 21);
+//            
+//            motor_max = MOTOR_MAX - 5;
+//            motor_mid = MOTOR_MID - 5;
+//            motor_min = MOTOR_MIN - 5;
+//            
+//            button_count += 1;
+//        }
+//        else if (((GPIOA_PDIR & (1 << 4)) == 0) && (button_count == 2))
+//        {
+//            GPIOE_PSOR = (1UL << 26);
+//            GPIOB_PSOR = (1UL << 21);
+//            
+//            // RED
+//            GPIOB_PCOR = (1UL << 22);
+//            
+//            motor_max = MOTOR_MAX - 10;
+//            motor_mid = MOTOR_MID - 10;
+//            motor_min = MOTOR_MIN - 10;
+//            
+//            button_count = 0;
+//        }
+//        //delay(10);
     }
-
-    // for (int button_count = 0; button_count <= 0; button_count++){
-        // if (button_count = 0){
-    motor_turn_max = MOTOR_TURN_MAX;
-    motor_straight_max = MOTOR_STRAIGHT_MAX;
-    motor_mid = MOTOR_MID;
-    motor_min = MOTOR_MIN;
-        // }
-        // else if(button_count = 1){
-        //     // Blue
-        //     GPIOB_PCOR = (1UL << 21);
-        //     for(int i = 0; i < 2000000; i=i+1){
-        //     }
-        //     GPIOB_PSOR = (1UL << 21);
-        //     motor_turn_max = MOTOR_TURN_MAX - 5;
-        //     motor_straight_max = MOTOR_STRAIGHT_MAX - 5;
-        //     motor_mid = MOTOR_MID - 5;
-        //     motor_min = MOTOR_MIN - 5;
-        // }
-        // else{
-        //     motor_turn_max = MOTOR_TURN_MAX - 10;
-        //     motor_straight_max = MOTOR_STRAIGHT_MAX - 10;
-        //     motor_mid = MOTOR_MID - 10;
-        //     motor_min = MOTOR_MIN - 10;
-        // }
-
+    
     while(1){
 
         // Read Trace Camera
@@ -142,96 +174,54 @@ int main(void)
         double servo_range = (double) SERVO_MAX - (double) SERVO_MIN;
         double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
         double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);
-
+                           
+        double middle_servo_offset = servo_duty - (double) SERVO_MIN;
+        int middle_servo_percent = 100 * (middle_servo_offset / servo_range);
+        int abs_motor_percent = abs(10 - (middle_servo_percent/5));
+                           
         // ALL THE WAY RIGHT
         if (servo_duty > SERVO_MAX)
         {
-            motor_duty_left = motor_turn_max;
-            motor_duty_right = motor_min;
             SetServoDutyCycle(SERVO_MAX);
-            dutycycle = motor_mid;
+            motor_duty_left = motor_min + abs_motor_percent;
+            motor_duty_right = motor_min - abs_motor_percent;
         }
         // ALL THE WAY LEFT
         else if (servo_duty < SERVO_MIN)
         {
-            motor_duty_left = motor_min;
-            motor_duty_right = motor_turn_max;
             SetServoDutyCycle(SERVO_MIN);
-            dutycycle = motor_mid;
+            motor_duty_left = motor_min - abs_motor_percent;
+            motor_duty_right = motor_min + abs_motor_percent;
         }
-        // Straightening out
         else
         {
-            if (old_dutycycle >= motor_straight_max)
-            {
-                dutycycle = motor_straight_max;
-            }
-            else
-            {
-                dutycycle = old_dutycycle + 3.0;
-            }
-            motor_duty_left = dutycycle;
-            motor_duty_right = dutycycle;
             SetServoDutyCycle(servo_duty);
-        }
-
-
-//        // Might rubber band if on turn it rectifies itself enough
-//        // could be made into a function
-//        // Turning slow down
-//        if (middle_delta > MARGIN)
-//        {
-//            if (old_dutycycle > motor_mid)
-//            {
-//                dutycycle = (double) motor_mid;
-//            }
-//            else if (old_dutycycle <= motor_min)
-//            {
-//                dutycycle = motor_min;
-//            }
-//            else
-//            {
-//                dutycycle = old_dutycycle - 5.0;
-//            }
-//        }
-//        // Straight Speed up
-//        else
-//        {
-//            if (old_dutycycle < motor_mid)
-//            {
-//                dutycycle = (double) motor_mid;
-//            }
-//            else if (old_dutycycle >= MOTOR_MAX)
-//            {
-//                dutycycle = MOTOR_MAX;
-//            }
-//            else
-//            {
-//                dutycycle = old_dutycycle + 3.0;
-//            }
-//        }
-//        old_dutycycle = dutycycle;
+            motor_duty_left = motor_max - abs_motor_percent;
+            motor_duty_right = motor_max - abs_motor_percent;
+            
+//            char mid_delta[10000];
+//            sprintf(mid_delta, "%d \n\r", middle_servo_percent);
+//            put(mid_delta);
+            
+        }              
 
         // Turn on motors
-//        SetMotorDutyCycleL(dutycycle, 10000, 1);
-//        SetMotorDutyCycleR(dutycycle, 10000, 1);
-
         SetMotorDutyCycleL(motor_duty_left, 10000, 1);
         SetMotorDutyCycleR(motor_duty_right, 10000, 1);
 
+        // update old servo values
         servo_turn_old = servo_turn;
         servo_err_old2 = servo_err_old1;
         servo_err_old1 = servo_err;
 
+        // update old middle
         old_calculated_middle = calculated_middle;
 
-        old_dutycycle = dutycycle;
-
-        // if(((GPIOC_PDIR & (1 << 6)) == 0)){
-        //     break;
-        // }
+        if(((GPIOC_PDIR & (1 << 6)) == 0)){
+            break;
+        }
     }
-    // }
+
 
 	return 0;
 }
@@ -268,9 +258,7 @@ void initialize(void) {
 Struct left_right_index(int16_t* array, int old_calculated_middle) {
     Struct s;
 
-    int16_t minimum = array[SIXTY_FOUR];
     int min_idx = SIXTY_FOUR;
-    int16_t maximum = array[SIXTY_FOUR];
     int max_idx = SIXTY_FOUR;
 
 

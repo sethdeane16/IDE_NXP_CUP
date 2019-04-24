@@ -401,16 +401,6 @@
               <FilePath>.\SRC\common.h</FilePath>
             </File>
             <File>
-              <FileName>isr.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\SRC\isr.c</FilePath>
-            </File>
-            <File>
-              <FileName>isr.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\SRC\isr.h</FilePath>
-            </File>
-            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\SRC\main.c</FilePath>
@@ -444,11 +434,6 @@
               <FileName>uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\SRC\uart.h</FilePath>
-            </File>
-            <File>
-              <FileName>pid.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\SRC\pid.c</FilePath>
             </File>
             <File>
               <FileName>filters.c</FileName>

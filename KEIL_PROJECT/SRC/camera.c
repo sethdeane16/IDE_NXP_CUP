@@ -320,6 +320,7 @@ void init_PIT(void) {
 void init_GPIO(void) {
 
     //initialize clocks for each different port used.
+    SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK; // Enables Clock on PORTA (BUTTON)
     SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK; // Enables Clock on PORTB. (LED)
     SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK; // Enables Clock on PORTE. (LED)
     SIM_SCGC5 |= SIM_SCGC5_PORTC_MASK; // Enables Clock on PORTC. (Button)
@@ -327,6 +328,7 @@ void init_GPIO(void) {
     //Configure Port Control Register for Inputs with pull enable and pull up resistor
 
     // Configure mux for Outputs
+    PORTA_PCR4 = PORT_PCR_MUX(1);   // SW3      (SW3)
     PORTB_PCR9 = PORT_PCR_MUX(1);  	// camera  	(clk)
     PORTB_PCR21 = PORT_PCR_MUX(1);  // Blue     (LED)
 	PORTB_PCR22 = PORT_PCR_MUX(1);  // Red      (LED)
@@ -334,13 +336,7 @@ void init_GPIO(void) {
     PORTC_PCR6 = PORT_PCR_MUX(1);   // button   (SW2)
     PORTE_PCR26 = PORT_PCR_MUX(1);  // Green    (LED)
 
-    // Switch the GPIO pins to output mode
-    // GPIOB_PDDR |= (1 << 9);  	// camera  	(clk)
-    // GPIOB_PDDR |= (1 << 21);    // Blue     (LED)
-    // GPIOB_PDDR |= (1 << 22);  	// Red      (LED)
-    // GPIOE_PDDR |= (1 << 26);    // Green    (LED)
-    // GPIOB_PDDR |= (1 << 23);  	// camera 	(SI)
-
+    GPIOA_PDDR &= (0 << 4);
     GPIOB_PDDR = (1 << 23) | (1 << 21) | (1 << 22) | (1 << 9);
     GPIOC_PDDR = (0 << 6);
     GPIOE_PDDR = (1 << 26);
