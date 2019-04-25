@@ -1,6 +1,6 @@
 
 /*
- * Auto generated Run-Time-Environment Configuration File
+ * Auto generated Run-Time-Environment Component Configuration File
  *      *** Do not modify ! ***
  *
  * Project: 'NXP_CAR_PROJECT' 
@@ -15,7 +15,6 @@
  * Define the Device Header File: 
  */
 #define CMSIS_device_header "MK64F12.h"
-
 
 
 #endif /* RTE_COMPONENTS_H */

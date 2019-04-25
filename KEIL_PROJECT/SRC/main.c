@@ -24,25 +24,20 @@
 
 // Servo ranges
 #define     SERVO_MIN           4.5
+#define     SERVO_MID           7.25
 #define     SERVO_MAX           9
-#define     SERVO_MID           (SERV_MIN + ((SERV_MIN + SERV_MAX) / 2))
 
 // Motor Ranges
-#define     MOTOR_TURN_MAX      65
-#define     MOTOR_MAX           85
-#define     MOTOR_MID           50
-#define     MOTOR_MIN           60
+#define     MOTOR_MAX           65
+#define     MOTOR_MIN           35
 
 // PID Values
 // combo that work
 //  - kp=6, ki=0, kd=2 at 40% duty cycle
 //  - kp=5, ki=0, kd=2 at 50% duty cycle
-#define     KP                  5.5
+#define     KP                  4.25
 #define     KI                  0.0
-#define     KD                  1.5
-
-#define     MKP                 2
-#define     MKD                 .5
+#define     KD                  2.0
 
 // Debugging variables (1 = Debug True)
 #define     CAM_DEBUG           0
@@ -71,18 +66,14 @@ int main(void)
     double servo_err_old2 = 0.0;
 
     // Initialize the starting duty cycle
-    int motor_duty_left = MOTOR_MID;
-    int motor_duty_right = MOTOR_MID;
+    int motor_duty_left = MOTOR_MAX;
+    int motor_duty_right = MOTOR_MIN;
 
     // motor speeds that can be changed based off the button
-    int motor_max = MOTOR_MID;
-    int motor_mid = MOTOR_MID;
-    int motor_min = MOTOR_MID;
-
+    int motor_max = MOTOR_MAX;
+    int motor_min = MOTOR_MIN;
+    
     int old_calculated_middle = SIXTY_FOUR;
-
-    // Speed/light control
-    int button_count = 0;
 
     // all LED colors off
     GPIOE_PSOR = (1UL << 26);
@@ -119,9 +110,8 @@ int main(void)
                 GPIOE_PCOR = (1UL << 26);
 
                 // Motor values
-                motor_max = MOTOR_MID;
-                motor_mid = MOTOR_MID;
-                motor_min = MOTOR_MID;
+                motor_max = MOTOR_MAX;
+                motor_min = MOTOR_MIN;
             }
             else if(button_count == 2)
             {
@@ -129,9 +119,8 @@ int main(void)
                 GPIOB_PCOR = (1UL << 21);
 
                 // Motor values
-                motor_max = MOTOR_MID - 5;
-                motor_mid = MOTOR_MID - 5;
-                motor_min = MOTOR_MID - 5;
+                motor_max = MOTOR_MAX - 5;
+                motor_min = MOTOR_MIN - 5;
             }
             else
             {
@@ -139,9 +128,8 @@ int main(void)
                 GPIOB_PCOR = (1UL << 22);
 
                 // Motor values
-                motor_max = MOTOR_MID - 10;
-                motor_mid = MOTOR_MID - 10;
-                motor_min = MOTOR_MID - 10;
+                motor_max = MOTOR_MAX - 10;
+                motor_min = MOTOR_MIN - 10;
             }
             while(1){
 
@@ -169,10 +157,12 @@ int main(void)
                 double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
                 double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);
 
+                // convert to a number useable for rear differential turning
                 double middle_servo_offset = servo_duty - (double) SERVO_MIN;
                 int middle_servo_percent = 100 * (middle_servo_offset / servo_range);
-                int abs_motor_percent = abs(10 - (middle_servo_percent/5));
+                int abs_motor_percent = abs(25 - (middle_servo_percent/2));
 
+                                   
                 // ALL THE WAY RIGHT
                 if (servo_duty > SERVO_MAX)
                 {
@@ -219,6 +209,11 @@ int main(void)
         }
         else
         {
+            // Stop before next run
+            SetMotorDutyCycleL(0, 10000, 1);
+            SetMotorDutyCycleR(0, 10000, 1);
+            SetServoDutyCycle(SERVO_MID);
+            
             // Wait to make sure the SW3 is unpressed
 			delay(20);
 
