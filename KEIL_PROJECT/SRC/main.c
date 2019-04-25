@@ -29,15 +29,11 @@
 #define     SERVO_MAX           9
 
 // Motor Ranges
-#define     MOTOR_MAX           65
+#define     MOTOR_MAX           70
 #define     MOTOR_MIN           35
 
 // PID Values
-// combo that work
-//  - kp=6, ki=0, kd=2 at 40% duty cycle
-//  - kp=5, ki=0, kd=2 at 50% duty cycle
-#define     KP_STRAIGHT         4.25
-#define     KP_TURN             6.25
+#define     KP                  4.25
 #define     KI                  0.0
 #define     KD                  2.0
 
@@ -74,7 +70,7 @@ int main(void)
     // motor speeds that can be changed based off the button
     int motor_max = MOTOR_MAX;
     int motor_min = MOTOR_MIN;
-    
+
     int old_calculated_middle = SIXTY_FOUR;
 
     // all LED colors off
@@ -121,8 +117,8 @@ int main(void)
                 GPIOB_PCOR = (1UL << 21);
 
                 // Motor values
-                motor_max = MOTOR_MAX - 5;
-                motor_min = MOTOR_MIN - 5;
+                motor_max = MOTOR_MAX - 8;
+                motor_min = MOTOR_MIN - 8;
             }
             else
             {
@@ -130,8 +126,8 @@ int main(void)
                 GPIOB_PCOR = (1UL << 22);
 
                 // Motor values
-                motor_max = MOTOR_MAX - 10;
-                motor_min = MOTOR_MIN - 10;
+                motor_max = MOTOR_MAX - 16;
+                motor_min = MOTOR_MIN - 16;
             }
             while(1){
 
@@ -146,24 +142,11 @@ int main(void)
                 Struct edge_index = left_right_index(deriv_sig, old_calculated_middle);
                 int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
                 int middle_delta = abs(SIXTY_FOUR - calculated_middle);
-                
-                // Set the initial KP to straight
-                double kp = KP_STRAIGHT;
-                double kp_range = KP_TURN - KP_STRAIGHT;
-                
-                if (middle_delta >= MAX_MARGIN)
-                {
-                    kp = KP_TURN;
-                }
-                else if(middle_delta > MIN_MARGIN)
-                {
-                    kp = (double) KP_STRAIGHT + (kp_range * ((double) middle_delta / 8.0));
-                }
 
                 // Perform PID calculations
                 double servo_err = (double) SIXTY_FOUR - (double) calculated_middle;
                 double servo_turn = servo_turn_old - \
-                                   (double) kp * (servo_err-servo_err_old1) - \
+                                   (double) KP * (servo_err-servo_err_old1) - \
                                    (double) KI * (servo_err+servo_err_old1)/2 - \
                                    (double) KD * (servo_err - 2*servo_err_old1 + servo_err_old2);
 
@@ -177,41 +160,30 @@ int main(void)
                 int middle_servo_percent = 100 * (middle_servo_offset / servo_range);
                 int abs_motor_percent = abs(25 - (middle_servo_percent/2));
 
-                                   
-                // ALL THE WAY RIGHT
+                // TURN ALL THE WAY RIGHT
                 if (servo_duty > SERVO_MAX)
                 {
-                    // SetServoDutyCycle(SERVO_MAX);
-                    motor_duty_left = motor_min + abs_motor_percent;
-                    motor_duty_right = motor_min - abs_motor_percent;
+                    SetServoDutyCycle(SERVO_MAX);
+                    motor_duty_left = (motor_max + motor_min) / 2;
+                    motor_duty_right = motor_min - 8;
                 }
-                // ALL THE WAY LEFT
+                // TURN ALL THE WAY LEFT
                 else if (servo_duty < SERVO_MIN)
                 {
-                    // SetServoDutyCycle(SERVO_MIN);
-                    motor_duty_left = motor_min - abs_motor_percent;
-                    motor_duty_right = motor_min + abs_motor_percent;
+                    SetServoDutyCycle(SERVO_MIN);
+                    motor_duty_left = motor_min - 8;
+                    motor_duty_right = (motor_max + motor_min) / 2;
                 }
                 else
                 {
-                    // SetServoDutyCycle(servo_duty);
+                    SetServoDutyCycle(servo_duty);
                     motor_duty_left = motor_max - abs_motor_percent;
                     motor_duty_right = motor_max - abs_motor_percent;
-
-//                   char mid_delta[10000];
-//                   sprintf(mid_delta, "%d %d \n\r", middle_delta, kp);
-//                   put(mid_delta);
-
                 }
-                
-                char mid_delta[10000];
-                sprintf(mid_delta, "%d %d %d %d %d \n\r", edge_index.right, edge_index.left, calculated_middle, middle_delta, (int) kp);
-                put(mid_delta);
-                delay(5);
 
                 // Turn on motors
-//                SetMotorDutyCycleL(motor_duty_left, 10000, 1);
-//                SetMotorDutyCycleR(motor_duty_right, 10000, 1);
+               SetMotorDutyCycleL(motor_duty_left, 10000, 1);
+               SetMotorDutyCycleR(motor_duty_right, 10000, 1);
 
                 // update old servo values
                 servo_turn_old = servo_turn;
@@ -233,7 +205,7 @@ int main(void)
             SetMotorDutyCycleL(0, 10000, 1);
             SetMotorDutyCycleR(0, 10000, 1);
             SetServoDutyCycle(SERVO_MID);
-            
+
             // Wait to make sure the SW3 is unpressed
 			delay(20);
 
