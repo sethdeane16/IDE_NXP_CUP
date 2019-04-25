@@ -78,150 +78,167 @@ int main(void)
     int motor_max = MOTOR_MID;
     int motor_mid = MOTOR_MID;
     int motor_min = MOTOR_MID;
-    
+
     int old_calculated_middle = SIXTY_FOUR;
 
     // Speed/light control
     int button_count = 0;
-    
+
     // all LED colors off
     GPIOE_PSOR = (1UL << 26);
     GPIOB_PSOR = (1UL << 21);
     GPIOB_PSOR = (1UL << 22);
-    
+
     // White
     GPIOE_PCOR = (1UL << 26);
     GPIOB_PCOR = (1UL << 21);
     GPIOB_PCOR = (1UL << 22);
 
+    // Wait until the button is pressed to start
     while (1) {
         // Once we select the mode, we break out of this loop ((GPIOC_PDIR & (1 << 6)) == 0)
-        if(((GPIOA_PDIR & (1 << 4)) == 0))
+        if((GPIOA_PDIR & (1 << 4)) == 0)
         {
+            // Turn off the LEDs
             GPIOE_PSOR = (1UL << 26);
             GPIOB_PSOR = (1UL << 21);
             GPIOB_PSOR = (1UL << 22);
+
+            // Wait to make sure the SW3 is unpressed
+			delay(20);
             break;
         }
-//        
-//        else if(((GPIOA_PDIR & (1 << 4)) == 0) && (button_count == 0))
-//        {
-//            GPIOB_PSOR = (1UL << 21);
-//            GPIOB_PSOR = (1UL << 22);
-//            
-//            // GREEN
-//            GPIOE_PCOR = (1UL << 26);
-//            
-//            motor_max = MOTOR_MAX;
-//            motor_mid = MOTOR_MID;
-//            motor_min = MOTOR_MIN;
-//            
-//            button_count += 1;
-//        }
-//        else if (((GPIOA_PDIR & (1 << 4)) == 0) && (button_count == 1))
-//        {
-//            GPIOE_PSOR = (1UL << 26);
-//            GPIOB_PSOR = (1UL << 22);
-//            
-//            // Blue
-//            GPIOB_PCOR = (1UL << 21);
-//            
-//            motor_max = MOTOR_MAX - 5;
-//            motor_mid = MOTOR_MID - 5;
-//            motor_min = MOTOR_MIN - 5;
-//            
-//            button_count += 1;
-//        }
-//        else if (((GPIOA_PDIR & (1 << 4)) == 0) && (button_count == 2))
-//        {
-//            GPIOE_PSOR = (1UL << 26);
-//            GPIOB_PSOR = (1UL << 21);
-//            
-//            // RED
-//            GPIOB_PCOR = (1UL << 22);
-//            
-//            motor_max = MOTOR_MAX - 10;
-//            motor_mid = MOTOR_MID - 10;
-//            motor_min = MOTOR_MIN - 10;
-//            
-//            button_count = 0;
-//        }
-//        //delay(10);
     }
-    
-    while(1){
 
-        // Read Trace Camera
-        camera_sig = Camera_Main();
+    for (int button_count = 0; button_count < 6; button_count++)
+    {
+        if (button_count % 2 == 0){
+            if (button_count == 0)
+            {
+                // GREEN
+                GPIOE_PCOR = (1UL << 26);
 
-        // Filter linescan camera signal
-        int16_t deriv_sig[ONE_TWENTY_EIGHT];
-        filter_main(camera_sig, deriv_sig);
+                // Motor values
+                motor_max = MOTOR_MID;
+                motor_mid = MOTOR_MID;
+                motor_min = MOTOR_MID;
+            }
+            else if(button_count == 2)
+            {
+                // Blue
+                GPIOB_PCOR = (1UL << 21);
 
-        // Calculate center of track
-        Struct edge_index = left_right_index(deriv_sig, old_calculated_middle);
-        int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
-        int middle_delta = abs(SIXTY_FOUR - calculated_middle);
+                // Motor values
+                motor_max = MOTOR_MID - 5;
+                motor_mid = MOTOR_MID - 5;
+                motor_min = MOTOR_MID - 5;
+            }
+            else
+            {
+                // RED
+                GPIOB_PCOR = (1UL << 22);
 
-        // Perform PID calculations
-        double servo_err = (double) SIXTY_FOUR - (double) calculated_middle;
-        double servo_turn = servo_turn_old - \
-                           (double) KP * (servo_err-servo_err_old1) - \
-                           (double) KI * (servo_err+servo_err_old1)/2 - \
-                           (double) KD * (servo_err - 2*servo_err_old1 + servo_err_old2);
+                // Motor values
+                motor_max = MOTOR_MID - 10;
+                motor_mid = MOTOR_MID - 10;
+                motor_min = MOTOR_MID - 10;
+            }
+            while(1){
 
-        // convert to a number usable by the servos
-        double servo_range = (double) SERVO_MAX - (double) SERVO_MIN;
-        double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
-        double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);
-                           
-        double middle_servo_offset = servo_duty - (double) SERVO_MIN;
-        int middle_servo_percent = 100 * (middle_servo_offset / servo_range);
-        int abs_motor_percent = abs(10 - (middle_servo_percent/5));
-                           
-        // ALL THE WAY RIGHT
-        if (servo_duty > SERVO_MAX)
-        {
-            SetServoDutyCycle(SERVO_MAX);
-            motor_duty_left = motor_min + abs_motor_percent;
-            motor_duty_right = motor_min - abs_motor_percent;
-        }
-        // ALL THE WAY LEFT
-        else if (servo_duty < SERVO_MIN)
-        {
-            SetServoDutyCycle(SERVO_MIN);
-            motor_duty_left = motor_min - abs_motor_percent;
-            motor_duty_right = motor_min + abs_motor_percent;
+                // Read Trace Camera
+                camera_sig = Camera_Main();
+
+                // Filter linescan camera signal
+                int16_t deriv_sig[ONE_TWENTY_EIGHT];
+                filter_main(camera_sig, deriv_sig);
+
+                // Calculate center of track
+                Struct edge_index = left_right_index(deriv_sig, old_calculated_middle);
+                int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
+                int middle_delta = abs(SIXTY_FOUR - calculated_middle);
+
+                // Perform PID calculations
+                double servo_err = (double) SIXTY_FOUR - (double) calculated_middle;
+                double servo_turn = servo_turn_old - \
+                                   (double) KP * (servo_err-servo_err_old1) - \
+                                   (double) KI * (servo_err+servo_err_old1)/2 - \
+                                   (double) KD * (servo_err - 2*servo_err_old1 + servo_err_old2);
+
+                // convert to a number usable by the servos
+                double servo_range = (double) SERVO_MAX - (double) SERVO_MIN;
+                double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
+                double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);
+
+                double middle_servo_offset = servo_duty - (double) SERVO_MIN;
+                int middle_servo_percent = 100 * (middle_servo_offset / servo_range);
+                int abs_motor_percent = abs(10 - (middle_servo_percent/5));
+
+                // ALL THE WAY RIGHT
+                if (servo_duty > SERVO_MAX)
+                {
+                    SetServoDutyCycle(SERVO_MAX);
+                    motor_duty_left = motor_min + abs_motor_percent;
+                    motor_duty_right = motor_min - abs_motor_percent;
+                }
+                // ALL THE WAY LEFT
+                else if (servo_duty < SERVO_MIN)
+                {
+                    SetServoDutyCycle(SERVO_MIN);
+                    motor_duty_left = motor_min - abs_motor_percent;
+                    motor_duty_right = motor_min + abs_motor_percent;
+                }
+                else
+                {
+                    SetServoDutyCycle(servo_duty);
+                    motor_duty_left = motor_max - abs_motor_percent;
+                    motor_duty_right = motor_max - abs_motor_percent;
+
+                   // char mid_delta[10000];
+                   // sprintf(mid_delta, "%d \n\r", middle_servo_percent);
+                   // put(mid_delta);
+
+                }
+
+                // Turn on motors
+                SetMotorDutyCycleL(motor_duty_left, 10000, 1);
+                SetMotorDutyCycleR(motor_duty_right, 10000, 1);
+
+                // update old servo values
+                servo_turn_old = servo_turn;
+                servo_err_old2 = servo_err_old1;
+                servo_err_old1 = servo_err;
+
+                // update old middle
+                old_calculated_middle = calculated_middle;
+
+                // break out if the SW3 is pressed
+                if((GPIOA_PDIR & (1 << 4)) == 0){
+                    break;
+                }
+            }
         }
         else
         {
-            SetServoDutyCycle(servo_duty);
-            motor_duty_left = motor_max - abs_motor_percent;
-            motor_duty_right = motor_max - abs_motor_percent;
-            
-//            char mid_delta[10000];
-//            sprintf(mid_delta, "%d \n\r", middle_servo_percent);
-//            put(mid_delta);
-            
-        }              
+            // Wait to make sure the SW3 is unpressed
+			delay(20);
 
-        // Turn on motors
-        SetMotorDutyCycleL(motor_duty_left, 10000, 1);
-        SetMotorDutyCycleR(motor_duty_right, 10000, 1);
+            // Turn off the LEDs
+			GPIOE_PSOR = (1UL << 26);
+            GPIOB_PSOR = (1UL << 21);
+            GPIOB_PSOR = (1UL << 22);
 
-        // update old servo values
-        servo_turn_old = servo_turn;
-        servo_err_old2 = servo_err_old1;
-        servo_err_old1 = servo_err;
-
-        // update old middle
-        old_calculated_middle = calculated_middle;
-
-        if(((GPIOC_PDIR & (1 << 6)) == 0)){
-            break;
+            // Wait to be turned on and ready to go slower
+			for(;;)
+            {
+                if((GPIOA_PDIR & (1 << 4)) == 0)
+                {
+                    // Wait to make sure the SW3 is unpressed
+					delay(20);
+                    break;
+                }
+            }
         }
     }
-
 
 	return 0;
 }
