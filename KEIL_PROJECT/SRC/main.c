@@ -20,7 +20,8 @@
 // Common Static Values
 #define     ONE_TWENTY_EIGHT    128
 #define     SIXTY_FOUR          64
-#define     MARGIN              2
+#define     MIN_MARGIN          4
+#define     MAX_MARGIN          8
 
 // Servo ranges
 #define     SERVO_MIN           4.5
@@ -35,7 +36,8 @@
 // combo that work
 //  - kp=6, ki=0, kd=2 at 40% duty cycle
 //  - kp=5, ki=0, kd=2 at 50% duty cycle
-#define     KP                  4.25
+#define     KP_STRAIGHT         4.25
+#define     KP_TURN             6.25
 #define     KI                  0.0
 #define     KD                  2.0
 
@@ -144,11 +146,24 @@ int main(void)
                 Struct edge_index = left_right_index(deriv_sig, old_calculated_middle);
                 int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
                 int middle_delta = abs(SIXTY_FOUR - calculated_middle);
+                
+                // Set the initial KP to straight
+                double kp = KP_STRAIGHT;
+                double kp_range = KP_TURN - KP_STRAIGHT;
+                
+                if (middle_delta >= MAX_MARGIN)
+                {
+                    kp = KP_TURN;
+                }
+                else if(middle_delta > MIN_MARGIN)
+                {
+                    kp = (double) KP_STRAIGHT + (kp_range * ((double) middle_delta / 8.0));
+                }
 
                 // Perform PID calculations
                 double servo_err = (double) SIXTY_FOUR - (double) calculated_middle;
                 double servo_turn = servo_turn_old - \
-                                   (double) KP * (servo_err-servo_err_old1) - \
+                                   (double) kp * (servo_err-servo_err_old1) - \
                                    (double) KI * (servo_err+servo_err_old1)/2 - \
                                    (double) KD * (servo_err - 2*servo_err_old1 + servo_err_old2);
 
@@ -166,32 +181,37 @@ int main(void)
                 // ALL THE WAY RIGHT
                 if (servo_duty > SERVO_MAX)
                 {
-                    SetServoDutyCycle(SERVO_MAX);
+                    // SetServoDutyCycle(SERVO_MAX);
                     motor_duty_left = motor_min + abs_motor_percent;
                     motor_duty_right = motor_min - abs_motor_percent;
                 }
                 // ALL THE WAY LEFT
                 else if (servo_duty < SERVO_MIN)
                 {
-                    SetServoDutyCycle(SERVO_MIN);
+                    // SetServoDutyCycle(SERVO_MIN);
                     motor_duty_left = motor_min - abs_motor_percent;
                     motor_duty_right = motor_min + abs_motor_percent;
                 }
                 else
                 {
-                    SetServoDutyCycle(servo_duty);
+                    // SetServoDutyCycle(servo_duty);
                     motor_duty_left = motor_max - abs_motor_percent;
                     motor_duty_right = motor_max - abs_motor_percent;
 
-                   // char mid_delta[10000];
-                   // sprintf(mid_delta, "%d \n\r", middle_servo_percent);
-                   // put(mid_delta);
+//                   char mid_delta[10000];
+//                   sprintf(mid_delta, "%d %d \n\r", middle_delta, kp);
+//                   put(mid_delta);
 
                 }
+                
+                char mid_delta[10000];
+                sprintf(mid_delta, "%d %d %d %d %d \n\r", edge_index.right, edge_index.left, calculated_middle, middle_delta, (int) kp);
+                put(mid_delta);
+                delay(5);
 
                 // Turn on motors
-                SetMotorDutyCycleL(motor_duty_left, 10000, 1);
-                SetMotorDutyCycleR(motor_duty_right, 10000, 1);
+//                SetMotorDutyCycleL(motor_duty_left, 10000, 1);
+//                SetMotorDutyCycleR(motor_duty_right, 10000, 1);
 
                 // update old servo values
                 servo_turn_old = servo_turn;
