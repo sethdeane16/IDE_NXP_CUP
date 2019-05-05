@@ -29,7 +29,7 @@
 #define     SERVO_MAX           9
 
 // Motor Ranges
-#define     MOTOR_MAX           70
+#define     MOTOR_MAX           68
 #define     MOTOR_MIN           35
 
 // PID Values
@@ -83,26 +83,101 @@ int main(void)
     GPIOB_PCOR = (1UL << 21);
     GPIOB_PCOR = (1UL << 22);
 
-    // Wait until the button is pressed to start
-    while (1) {
-        // Once we select the mode, we break out of this loop ((GPIOC_PDIR & (1 << 6)) == 0)
-        if((GPIOA_PDIR & (1 << 4)) == 0)
-        {
-            // Turn off the LEDs
-            GPIOE_PSOR = (1UL << 26);
-            GPIOB_PSOR = (1UL << 21);
-            GPIOB_PSOR = (1UL << 22);
+    // Motor values
+    motor_max = MOTOR_MAX - 8;
+    motor_min = MOTOR_MIN - 8;
 
-            // Wait to make sure the SW3 is unpressed
-			delay(20);
+
+    while(1){
+
+        // Read Trace Camera
+        camera_sig = Camera_Main();
+
+        // Filter linescan camera signal
+        int16_t deriv_sig[ONE_TWENTY_EIGHT];
+        filter_main(camera_sig, deriv_sig);
+
+        // Calculate center of track
+        Struct edge_index = left_right_index(deriv_sig, old_calculated_middle);
+        int calculated_middle = ((edge_index.right - edge_index.left)/2) + edge_index.left;
+        int middle_delta = abs(SIXTY_FOUR - calculated_middle);
+
+        // Perform PID calculations
+        double servo_err = (double) SIXTY_FOUR - (double) calculated_middle;
+        double servo_turn = servo_turn_old - \
+                           (double) KP * (servo_err-servo_err_old1) - \
+                           (double) KI * (servo_err+servo_err_old1)/2 - \
+                           (double) KD * (servo_err - 2*servo_err_old1 + servo_err_old2);
+
+        // convert to a number usable by the servos
+        double servo_range = (double) SERVO_MAX - (double) SERVO_MIN;
+        double range_mult = (double) ONE_TWENTY_EIGHT / servo_range;
+        double servo_duty = (double) SERVO_MIN + (servo_turn / (double) range_mult);
+
+        // convert to a number useable for rear differential turning
+        double middle_servo_offset = servo_duty - (double) SERVO_MIN;
+        int middle_servo_percent = 100 * (middle_servo_offset / servo_range);
+        int abs_motor_percent = abs(25 - (middle_servo_percent/2));
+
+        // TURN ALL THE WAY RIGHT
+        if (servo_duty > SERVO_MAX)
+        {
+            SetServoDutyCycle(SERVO_MAX);
+            motor_duty_left = (motor_max + motor_min) / 2;
+            motor_duty_right = motor_min - 8;
+        }
+        // TURN ALL THE WAY LEFT
+        else if (servo_duty < SERVO_MIN)
+        {
+            SetServoDutyCycle(SERVO_MIN);
+            motor_duty_left = motor_min - 8;
+            motor_duty_right = (motor_max + motor_min) / 2;
+        }
+        else
+        {
+            SetServoDutyCycle(servo_duty);
+            motor_duty_left = motor_max - abs_motor_percent;
+            motor_duty_right = motor_max - abs_motor_percent;
+        }
+
+        // Turn on motors
+       SetMotorDutyCycleL(motor_duty_left, 10000, 1);
+       SetMotorDutyCycleR(motor_duty_right, 10000, 1);
+
+        // update old servo values
+        servo_turn_old = servo_turn;
+        servo_err_old2 = servo_err_old1;
+        servo_err_old1 = servo_err;
+
+        // update old middle
+        old_calculated_middle = calculated_middle;
+
+        // break out if the SW3 is pressed
+        if((GPIOA_PDIR & (1 << 4)) == 0){
             break;
         }
     }
+    //
+    // // Wait until the button is pressed to start
+    // while (1) {
+    //     // Once we select the mode, we break out of this loop ((GPIOC_PDIR & (1 << 6)) == 0)
+    //     if((GPIOA_PDIR & (1 << 4)) == 0)
+    //     {
+    //         // Turn off the LEDs
+    //         GPIOE_PSOR = (1UL << 26);
+    //         GPIOB_PSOR = (1UL << 21);
+    //         GPIOB_PSOR = (1UL << 22);
+    //
+    //         // Wait to make sure the SW3 is unpressed
+	// 		delay(20);
+    //         break;
+    //     }
+    // }
 
-    for (int button_count = 0; button_count < 6; button_count++)
+    for (int button_count = 0; button_count < 11; button_count++)
     {
-        if (button_count % 2 == 0){
-            if (button_count == 0)
+        if (button_count % 2 == 1){
+            if (button_count == 1)
             {
                 // GREEN
                 GPIOE_PCOR = (1UL << 26);
@@ -111,7 +186,17 @@ int main(void)
                 motor_max = MOTOR_MAX;
                 motor_min = MOTOR_MIN;
             }
-            else if(button_count == 2)
+            else if(button_count == 3)
+            {
+                // Magenta
+                GPIOB_PCOR = (1UL << 22);
+                GPIOB_PCOR = (1UL << 21);
+
+                // Motor values
+                motor_max = MOTOR_MAX - 3;
+                motor_min = MOTOR_MIN - 3;
+            }
+            else if(button_count == 5)
             {
                 // Blue
                 GPIOB_PCOR = (1UL << 21);
@@ -120,14 +205,24 @@ int main(void)
                 motor_max = MOTOR_MAX - 8;
                 motor_min = MOTOR_MIN - 8;
             }
+            else if(button_count == 7)
+            {
+                // A Color
+                GPIOB_PCOR = (1UL << 22);
+                GPIOE_PCOR = (1UL << 26);
+
+                // Motor values
+                motor_max = MOTOR_MAX - 13;
+                motor_min = MOTOR_MIN - 13;
+            }
             else
             {
                 // RED
                 GPIOB_PCOR = (1UL << 22);
 
                 // Motor values
-                motor_max = MOTOR_MAX - 16;
-                motor_min = MOTOR_MIN - 16;
+                motor_max = MOTOR_MAX - 18;
+                motor_min = MOTOR_MIN - 18;
             }
             while(1){
 
